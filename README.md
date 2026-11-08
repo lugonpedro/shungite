@@ -48,9 +48,25 @@ Requer Rust instalado (via `rustup`) e disponível no `PATH`. A primeira compila
 
 ```bash
 supabase start
+supabase db reset   # aplica as migrations do zero + seed
+supabase test db    # testes de RLS e timestamps (pgTAP)
 ```
 
 Inicia os serviços locais do Supabase (Postgres, Auth, Realtime etc.) usando a configuração em `supabase/`. Requer a Supabase CLI instalada.
+
+As migrations ficam em `supabase/migrations/` (tabelas `tasks`, `notes` e `devices`, todas com RLS por `user_id`).
+
+### Login no app (magic link)
+
+O Sync é opcional: sem as variáveis abaixo o app roda só com dados locais e o painel de conta mostra "Sync desligado".
+
+```bash
+cp apps/app/.env.example apps/app/.env.local
+# preencha VITE_SUPABASE_ANON_KEY com a ANON_KEY de `supabase status`
+pnpm app:web   # ou pnpm app:dev
+```
+
+O login é por magic link: digite o e-mail, abra o link recebido (ou use o código de 6 dígitos mostrado no e-mail) e o Sync liga. No Supabase local os e-mails não saem de verdade: aparecem no Mailpit em `http://127.0.0.1:54324`. O botão "Sair" encerra a sessão e o app volta a funcionar só localmente.
 
 ## Documentação
 
