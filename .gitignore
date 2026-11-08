@@ -1,0 +1,28 @@
+# Node
+node_modules/
+dist/
+*.log
+.pnpm-store/
+
+# Tauri / Rust
+target/
+src-tauri/gen/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Scratch / OS / editor
+.scratch/
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
