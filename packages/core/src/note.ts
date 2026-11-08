@@ -42,6 +42,42 @@ export function joinPath(folder: string, fileName: string): string {
   return `${folder.replace(/\/+$/, "")}/${fileName}`;
 }
 
+/**
+ * The Note's path inside the Vault, without the Vault folder prefix. Notes are
+ * synced by this relative path so a Home and a Satellite can each resolve it
+ * against their own Vault root.
+ */
+export function relativePath(vaultPath: string, absPath: string): string {
+  const root = vaultPath.replace(/\/+$/, "");
+  if (absPath === root) {
+    return "";
+  }
+  if (absPath.startsWith(`${root}/`)) {
+    return absPath.slice(root.length + 1);
+  }
+  return absPath;
+}
+
+/** Resolves a Vault-relative Note path against a device's own Vault folder. */
+export function resolvePath(vaultPath: string, relative: string): string {
+  if (relative === "") {
+    return vaultPath.replace(/\/+$/, "");
+  }
+  return `${vaultPath.replace(/\/+$/, "")}/${relative}`;
+}
+
+/**
+ * The Conflict copy path for a Note: `Note.md` becomes `Note (conflito).md`,
+ * keeping any subfolder.
+ */
+export function conflictCopyPath(path: string): string {
+  const separator = path.lastIndexOf("/");
+  const folder = separator === -1 ? "" : path.slice(0, separator + 1);
+  const name = separator === -1 ? path : path.slice(separator + 1);
+  const stem = name.replace(/\.md$/i, "");
+  return `${folder}${stem} (conflito).md`;
+}
+
 export function formatNote(note: NoteData): string {
   const lines = [
     "---",

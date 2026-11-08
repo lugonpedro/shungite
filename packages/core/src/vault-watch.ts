@@ -1,4 +1,5 @@
-import { parseNote } from "./note";
+import { parseNote, relativePath } from "./note";
+import { recordNoteChange } from "./note-sync";
 import type { FileStore, LocalStore, ReconcileResult, Task } from "./types";
 
 /** The Task title derived from a Note path: the file name without the `.md`. */
@@ -13,6 +14,7 @@ interface NoteOnDisk {
   title: string;
   done: boolean;
   due: string | null;
+  content: string;
 }
 
 export interface ReconcileDeps {
@@ -62,6 +64,7 @@ export async function reconcileVault(deps: ReconcileDeps): Promise<ReconcileResu
       title: noteTitle(path),
       done: note.done,
       due: note.due,
+      content,
     });
   }
 
@@ -74,13 +77,35 @@ export async function reconcileVault(deps: ReconcileDeps): Promise<ReconcileResu
     }
     const note = notes.get(task.id);
     if (note === undefined) {
-      // The Note is gone: the Task returns to the To-Do without a file.
+      // The Note is gone: the Task returns to the To-Do without a file, and
+      // the Note's tombstone is recorded so Sync removes it elsewhere too.
       const updated = touch({ ...task, notePath: null }, now);
       await localStore.saveTask(updated);
+      await recordNoteChange(localStore, {
+        id: task.id,
+        path: relativePath(vaultPath, task.notePath),
+        content: "",
+        deleted: true,
+        createdAt: task.createdAt,
+        updatedAt: now().toISOString(),
+      });
       changed.push(updated);
       demoted += 1;
       continue;
     }
+
+    // Reconcile the Note's sync state from what is on disk, bumping its
+    // version only when the path or content actually changed (covers edits
+    // to the free-form body too).
+    await recordNoteChange(localStore, {
+      id: task.id,
+      path: relativePath(vaultPath, note.path),
+      content: note.content,
+      deleted: false,
+      createdAt: task.createdAt,
+      updatedAt: now().toISOString(),
+    });
+
     if (
       task.text !== note.title ||
       task.done !== note.done ||
