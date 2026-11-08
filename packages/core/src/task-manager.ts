@@ -9,6 +9,7 @@ import {
   type UpdateTaskInput,
 } from "./types";
 import { formatNote, joinPath, noteFileName, parseNote } from "./note";
+import { createSyncEngine } from "./sync";
 import { uuidv7 } from "./uuid";
 
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,6 +38,17 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
   const now = deps.now ?? (() => new Date());
   const newId =
     deps.newId ?? (() => uuidv7(deps.now ? deps.now() : new Date()));
+
+  const syncEngine =
+    deps.remoteStore !== undefined && deps.device !== undefined
+      ? createSyncEngine({
+          localStore,
+          remoteStore: deps.remoteStore,
+          device: deps.device,
+          now,
+          newId,
+        })
+      : null;
 
   async function requireTask(id: string): Promise<Task> {
     const task = await localStore.getTask(id);
@@ -233,6 +245,12 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
       }
 
       return save({ ...task, notePath: path });
+    },
+
+    async sync() {
+      if (syncEngine !== null) {
+        await syncEngine.sync();
+      }
     },
   };
 }

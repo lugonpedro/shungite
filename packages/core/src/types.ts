@@ -1,3 +1,5 @@
+import type { DeviceInfo, RemoteStore } from "./remote-store";
+
 /** A Task. It exists in the local store even when it has no Note. */
 export interface Task {
   id: string;
@@ -44,6 +46,9 @@ export interface UpdateTaskInput {
 export interface TaskManagerDeps {
   localStore: LocalStore;
   fileStore: FileStore;
+  /** Remote store and device identity; without them Sync stays off. */
+  remoteStore?: RemoteStore;
+  device?: DeviceInfo;
   /** Injectable clock for tests. */
   now?: () => Date;
   /** Injectable id factory for tests. */
@@ -68,6 +73,8 @@ export interface TaskManager {
   deleteTask(id: string): Promise<void>;
   /** Creates the Task's Note in the Vault and rewrites it on later changes. */
   promoteTask(id: string): Promise<Task>;
+  /** Syncs Tasks with the remote store; a no-op without a `RemoteStore`. */
+  sync(): Promise<void>;
 }
 
 export class VaultRequiredError extends Error {
