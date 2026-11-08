@@ -61,6 +61,11 @@ export interface TaskManager {
   getTask(id: string): Promise<Task | null>;
   setTaskDone(id: string, done: boolean): Promise<Task>;
   updateTask(id: string, changes: UpdateTaskInput): Promise<Task>;
+  /**
+   * Deletes the Task for real. A tombstone stays in the store so the deletion
+   * can reach other devices through Sync, and the Note is removed with it.
+   */
+  deleteTask(id: string): Promise<void>;
   /** Creates the Task's Note in the Vault and rewrites it on later changes. */
   promoteTask(id: string): Promise<Task>;
 }
