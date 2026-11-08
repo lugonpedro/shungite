@@ -13,6 +13,7 @@ import {
 import { AuthPanel } from "./auth/AuthPanel";
 import { createFileStore } from "./file-store";
 import { createTauriLocalStore } from "./tauri-local-store";
+import { useVaultWatch } from "./use-vault-watch";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -86,6 +87,8 @@ function Todo({ core }: { core: TaskManager }) {
   const refresh = useCallback(async () => {
     setTasks(await core.listTasks());
   }, [core]);
+
+  useVaultWatch(core, refresh);
 
   useEffect(() => {
     let active = true;

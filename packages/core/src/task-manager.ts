@@ -10,6 +10,7 @@ import {
 } from "./types";
 import { formatNote, joinPath, noteFileName, parseNote } from "./note";
 import { uuidv7 } from "./uuid";
+import { reconcileVault } from "./vault-watch";
 
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -233,6 +234,10 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
       }
 
       return save({ ...task, notePath: path });
+    },
+
+    async reconcileVault() {
+      return reconcileVault({ localStore, fileStore, now });
     },
   };
 }

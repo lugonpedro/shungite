@@ -49,5 +49,11 @@ export function createMemoryFileStore(): MemoryFileStore {
     async exists(path) {
       return files.has(path);
     },
+    async list(dir) {
+      const prefix = `${dir.replace(/\/+$/, "")}/`;
+      return [...files.keys()].filter(
+        (path) => path === dir || path.startsWith(prefix),
+      );
+    },
   };
 }
