@@ -7,8 +7,11 @@ import {
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { AuthPanel } from "./auth/AuthPanel";
 import { supabase } from "./auth/supabaseClient";
@@ -30,6 +33,38 @@ function formatDue(due: string): string {
     return due;
   }
   return `${day}/${month}/${year}`;
+}
+
+interface LayoutProps {
+  syncOn: boolean;
+  children: ReactNode;
+}
+
+/**
+ * The app's two areas: a narrow sidebar with the To-Do item and the Sync
+ * indicator at the bottom, and the main area with the current screen.
+ */
+function Layout({ syncOn, children }: LayoutProps) {
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <nav aria-label="Navegação" className="sidebar__nav">
+          <span aria-current="page" className="sidebar__item sidebar__item--active">
+            To-Do
+          </span>
+        </nav>
+        <footer className="sidebar__footer">
+          <span
+            className={syncOn ? "sync-status sync-status--on" : "sync-status"}
+          >
+            <span aria-hidden="true" className="sync-status__dot" />
+            {syncOn ? "sincronizado" : "Sync desligado"}
+          </span>
+        </footer>
+      </aside>
+      <main className="app">{children}</main>
+    </div>
+  );
 }
 
 export function App() {
@@ -88,23 +123,27 @@ export function App() {
 
   if (startupError !== null) {
     return (
-      <main className="app">
+      <Layout syncOn={signedIn}>
         <p className="error" role="alert">
           Não foi possível abrir o banco local: {startupError}
         </p>
-      </main>
+      </Layout>
     );
   }
 
   if (core === null) {
     return (
-      <main className="app">
+      <Layout syncOn={signedIn}>
         <p className="muted">Carregando…</p>
-      </main>
+      </Layout>
     );
   }
 
-  return <Todo core={core} />;
+  return (
+    <Layout syncOn={signedIn}>
+      <Todo core={core} />
+    </Layout>
+  );
 }
 
 function Todo({ core }: { core: TaskManager }) {
@@ -113,6 +152,24 @@ function Todo({ core }: { core: TaskManager }) {
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
+  const addInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "n"
+      ) {
+        event.preventDefault();
+        addInputRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const refresh = useCallback(async () => {
     setTasks(await core.listTasks());
@@ -197,7 +254,7 @@ function Todo({ core }: { core: TaskManager }) {
   const done = tasks.length - open;
 
   return (
-    <main className="app">
+    <>
       <header className="app__header">
         <h1>To-Do</h1>
         {tasks.length > 0 && (
@@ -216,6 +273,7 @@ function Todo({ core }: { core: TaskManager }) {
           className="add-form__text"
           onChange={(event) => setText(event.target.value)}
           placeholder="O que precisa ser feito?"
+          ref={addInputRef}
           value={text}
         />
         <input
@@ -253,7 +311,7 @@ function Todo({ core }: { core: TaskManager }) {
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }
 
@@ -268,6 +326,7 @@ function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(task.text);
   const [draftDue, setDraftDue] = useState(task.due ?? "");
+  const conflict = /\(conflito\)$/i.test(task.text.trim());
 
   function startEditing() {
     setDraftText(task.text);
@@ -290,10 +349,21 @@ function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
     }
   }
 
+  function cancelOnEscape(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setEditing(false);
+    }
+  }
+
   if (editing) {
     return (
       <li className="task task--editing">
-        <form className="task__edit-form" onSubmit={saveEdit}>
+        <form
+          className="task__edit-form"
+          onKeyDown={cancelOnEscape}
+          onSubmit={saveEdit}
+        >
           <input
             aria-label="Editar texto"
             autoFocus
@@ -333,6 +403,14 @@ function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
         type="checkbox"
       />
       <span className="task__text">{task.text}</span>
+      {conflict && (
+        <span
+          className="task__badge"
+          title="Versão em conflito: revisar e apagar quando quiser"
+        >
+          conflito
+        </span>
+      )}
       {task.due !== null && (
         <time className="task__due" dateTime={task.due}>
           {formatDue(task.due)}
@@ -340,7 +418,7 @@ function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
       )}
       <button
         aria-label={`Editar ${task.text}`}
-        className="button--ghost"
+        className="button--ghost task__action"
         onClick={startEditing}
         type="button"
       >
@@ -348,7 +426,7 @@ function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
       </button>
       <button
         aria-label={`Apagar ${task.text}`}
-        className="button--danger"
+        className="button--danger task__action"
         onClick={() => void onDelete(task.id)}
         type="button"
       >
