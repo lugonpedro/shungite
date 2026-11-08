@@ -10,6 +10,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { AuthPanel } from "./auth/AuthPanel";
 import { createFileStore } from "./file-store";
 import { createTauriLocalStore } from "./tauri-local-store";
 
@@ -169,6 +170,8 @@ function Todo({ core }: { core: TaskManager }) {
           </p>
         )}
       </header>
+
+      <AuthPanel />
 
       <form className="add-form" onSubmit={addTask}>
         <input

@@ -1,0 +1,2 @@
+-- Seed data for the local Supabase instance.
+-- No seed rows for now: the app must work from a clean database.
