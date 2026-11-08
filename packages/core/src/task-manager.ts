@@ -200,6 +200,18 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
       return save(changed);
     },
 
+    async deleteTask(id) {
+      const task = await requireTask(id);
+      // The Note belongs to the Task; deleting the Task must not leave an
+      // orphan `.md` that a later Vault scan would bring back.
+      if (task.notePath !== null) {
+        await fileStore.remove(task.notePath);
+      }
+      await localStore.saveTask(
+        touch({ ...task, deleted: true, notePath: null }),
+      );
+    },
+
     async promoteTask(id) {
       const task = await requireTask(id);
       const vaultPath = await localStore.getVaultPath();

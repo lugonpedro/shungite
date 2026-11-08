@@ -1,56 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { createTaskManager } from "./index";
 import {
-  createTaskManager,
-  type FileStore,
-  type LocalStore,
-  type Task,
-} from "./index";
-
-function createLocalStore(): LocalStore & {
-  tasks: Map<string, Task>;
-  vaultPath: string | null;
-} {
-  const tasks = new Map<string, Task>();
-  const store = {
-    tasks,
-    vaultPath: null as string | null,
-    async getTask(id: string) {
-      return tasks.get(id) ?? null;
-    },
-    async getTasks() {
-      return [...tasks.values()];
-    },
-    async saveTask(task: Task) {
-      tasks.set(task.id, { ...task });
-    },
-    async getVaultPath() {
-      return store.vaultPath;
-    },
-    async saveVaultPath(path: string | null) {
-      store.vaultPath = path;
-    },
-  };
-  return store;
-}
-
-function createFileStore(): FileStore & { files: Map<string, string> } {
-  const files = new Map<string, string>();
-  return {
-    files,
-    async read(path) {
-      return files.get(path) ?? null;
-    },
-    async write(path, content) {
-      files.set(path, content);
-    },
-    async remove(path) {
-      files.delete(path);
-    },
-    async exists(path) {
-      return files.has(path);
-    },
-  };
-}
+  createMemoryFileStore as createFileStore,
+  createMemoryLocalStore as createLocalStore,
+} from "./test-support";
 
 describe("promote", () => {
   it("creates a Note named after the Task with id, done and due in the frontmatter", async () => {

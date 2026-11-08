@@ -12,6 +12,7 @@
   "dependencies": {
     "@taskmanager/core": "workspace:*",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-sql": "^2.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
