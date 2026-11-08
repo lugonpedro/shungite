@@ -43,3 +43,7 @@ _Avoid_: Backup, duplicata
 **To-Do**:
 A aba inicial do app, onde o usuário vê e controla todas as Tarefas.
 _Avoid_: Inbox, home, dashboard
+
+**Configurações**:
+A tela que concentra o Vault (pasta atual, trocar) e a Conta e Sync. Aberta pelo rodapé da barra lateral.
+_Avoid_: Settings, Preferências, Ajustes
