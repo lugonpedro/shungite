@@ -31,6 +31,11 @@ export interface FileStore {
   write(path: string, content: string): Promise<void>;
   remove(path: string): Promise<void>;
   exists(path: string): Promise<boolean>;
+  /**
+   * Absolute paths of every `.md` file under `dir`, recursively. Notes in
+   * subfolders are included.
+   */
+  list(dir: string): Promise<string[]>;
 }
 
 export interface CreateTaskInput {
@@ -75,6 +80,23 @@ export interface TaskManager {
   promoteTask(id: string): Promise<Task>;
   /** Syncs Tasks with the remote store; a no-op without a `RemoteStore`. */
   sync(): Promise<void>;
+  /**
+   * Reconciles external edits to the Vault into Tasks: frontmatter changes
+   * update `done`/`due`, a rename updates `text`, a deleted `.md` undoes the
+   * Promote, and `.md` files without an `id` are ignored.
+   */
+  reconcileVault(): Promise<ReconcileResult>;
+}
+
+export interface ReconcileResult {
+  /** Tasks whose fields changed because of an external edit to their Note. */
+  changed: Task[];
+  /** Notes in the Vault that carry an `id` and were linked to a Task. */
+  scanned: number;
+  /** `.md` files ignored because their frontmatter has no `id`. */
+  ignored: number;
+  /** Tasks whose Note was removed externally, undoing the Promote. */
+  demoted: number;
 }
 
 export class VaultRequiredError extends Error {

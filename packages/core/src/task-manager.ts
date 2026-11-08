@@ -11,6 +11,7 @@ import {
 import { formatNote, joinPath, noteFileName, parseNote } from "./note";
 import { createSyncEngine } from "./sync";
 import { uuidv7 } from "./uuid";
+import { reconcileVault } from "./vault-watch";
 
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -251,6 +252,10 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
       if (syncEngine !== null) {
         await syncEngine.sync();
       }
+    },
+
+    async reconcileVault() {
+      return reconcileVault({ localStore, fileStore, now });
     },
   };
 }
