@@ -10,8 +10,10 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "@taskmanager/core": "workspace:*",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-sql": "^2.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
