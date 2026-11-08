@@ -1,4 +1,5 @@
 import { initialTab } from "@taskmanager/core";
+import { AuthPanel } from "./auth/AuthPanel";
 
 export function App() {
   const tab = initialTab();
@@ -7,6 +8,7 @@ export function App() {
       <nav>
         <button aria-current={tab === "todo"}>To-Do</button>
       </nav>
+      <AuthPanel />
       <section aria-label="To-Do">
         <p>Nenhuma tarefa ainda.</p>
       </section>
