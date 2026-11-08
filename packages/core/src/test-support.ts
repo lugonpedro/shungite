@@ -1,4 +1,14 @@
-import type { FileStore, LocalStore, Task } from "./types";
+import type {
+  FileStore,
+  LocalStore,
+  Task,
+} from "./types";
+import type {
+  RemoteDevice,
+  RemoteNote,
+  RemoteStore,
+  RemoteTask,
+} from "./remote-store";
 
 export type MemoryLocalStore = LocalStore & {
   tasks: Map<string, Task>;
@@ -54,6 +64,42 @@ export function createMemoryFileStore(): MemoryFileStore {
       return [...files.keys()].filter(
         (path) => path === dir || path.startsWith(prefix),
       );
+    },
+  };
+}
+
+export type MemoryRemoteStore = RemoteStore & {
+  tasks: Map<string, RemoteTask>;
+  notes: Map<string, RemoteNote>;
+  devices: Map<string, RemoteDevice>;
+};
+
+/** In-memory `RemoteStore` shared by the Home and Satellite core instances. */
+export function createMemoryRemoteStore(): MemoryRemoteStore {
+  const tasks = new Map<string, RemoteTask>();
+  const notes = new Map<string, RemoteNote>();
+  const devices = new Map<string, RemoteDevice>();
+  return {
+    tasks,
+    notes,
+    devices,
+    async listTasks() {
+      return [...tasks.values()];
+    },
+    async upsertTask(task) {
+      tasks.set(task.id, { ...task });
+    },
+    async listNotes() {
+      return [...notes.values()];
+    },
+    async upsertNote(note) {
+      notes.set(note.id, { ...note });
+    },
+    async listDevices() {
+      return [...devices.values()];
+    },
+    async registerDevice(device) {
+      devices.set(device.id, { ...device });
     },
   };
 }
