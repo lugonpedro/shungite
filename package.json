@@ -1,0 +1,11 @@
+{
+  "name": "taskmanager",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "app:dev": "pnpm --filter @taskmanager/app tauri dev",
+    "app:web": "pnpm --filter @taskmanager/app dev"
+  }
+}

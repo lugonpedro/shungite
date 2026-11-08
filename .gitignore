@@ -6,7 +6,8 @@ dist/
 
 # Tauri / Rust
 target/
-src-tauri/gen/
+**/src-tauri/gen/
+
 
 # Env / secrets
 .env
