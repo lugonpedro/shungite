@@ -16,11 +16,31 @@ export interface Task {
   notePath: string | null;
 }
 
-/** Local persistence for Tasks and app settings (SQLite in the app). */
+/**
+ * The Sync metadata for a Note. A Note shares its `id` with the Task it was
+ * promoted from; `path` is Vault-relative so a Home and a Satellite can each
+ * resolve it against their own Vault root. `content` is the full `.md` text
+ * (frontmatter + body), kept here so changes are detected without a clock.
+ */
+export interface NoteSyncState {
+  id: string;
+  path: string;
+  content: string;
+  version: number;
+  baseVersion: number;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Local persistence for Tasks, Notes and app settings (SQLite in the app). */
 export interface LocalStore {
   getTask(id: string): Promise<Task | null>;
   getTasks(): Promise<Task[]>;
   saveTask(task: Task): Promise<void>;
+  getNote(id: string): Promise<NoteSyncState | null>;
+  getNotes(): Promise<NoteSyncState[]>;
+  saveNote(note: NoteSyncState): Promise<void>;
   getVaultPath(): Promise<string | null>;
   saveVaultPath(path: string | null): Promise<void>;
 }

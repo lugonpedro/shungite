@@ -1,6 +1,7 @@
 import type {
   FileStore,
   LocalStore,
+  NoteSyncState,
   Task,
 } from "./types";
 import type {
@@ -12,14 +13,17 @@ import type {
 
 export type MemoryLocalStore = LocalStore & {
   tasks: Map<string, Task>;
+  notes: Map<string, NoteSyncState>;
   vaultPath: string | null;
 };
 
 /** In-memory `LocalStore`, shared by the core tests. */
 export function createMemoryLocalStore(): MemoryLocalStore {
   const tasks = new Map<string, Task>();
+  const notes = new Map<string, NoteSyncState>();
   const store: MemoryLocalStore = {
     tasks,
+    notes,
     vaultPath: null,
     async getTask(id) {
       return tasks.get(id) ?? null;
@@ -29,6 +33,15 @@ export function createMemoryLocalStore(): MemoryLocalStore {
     },
     async saveTask(task) {
       tasks.set(task.id, { ...task });
+    },
+    async getNote(id) {
+      return notes.get(id) ?? null;
+    },
+    async getNotes() {
+      return [...notes.values()];
+    },
+    async saveNote(note) {
+      notes.set(note.id, { ...note });
     },
     async getVaultPath() {
       return store.vaultPath;

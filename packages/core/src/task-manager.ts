@@ -8,7 +8,8 @@ import {
   type TaskManagerDeps,
   type UpdateTaskInput,
 } from "./types";
-import { formatNote, joinPath, noteFileName, parseNote } from "./note";
+import { formatNote, joinPath, noteFileName, parseNote, relativePath } from "./note";
+import { recordNoteChange } from "./note-sync";
 import { createSyncEngine } from "./sync";
 import { uuidv7 } from "./uuid";
 import { reconcileVault } from "./vault-watch";
@@ -44,6 +45,7 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
     deps.remoteStore !== undefined && deps.device !== undefined
       ? createSyncEngine({
           localStore,
+          fileStore,
           remoteStore: deps.remoteStore,
           device: deps.device,
           now,
@@ -107,21 +109,58 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
   }
 
   /** Rewrites the Note's frontmatter from the Task, keeping the free-form body. */
-  async function rewriteNote(task: Task): Promise<Task> {
+  async function rewriteNote(
+    task: Task,
+  ): Promise<{ task: Task; content: string | null }> {
     if (task.notePath === null) {
-      return task;
+      return { task, content: null };
     }
     const current = await fileStore.read(task.notePath);
     if (current === null) {
       // The Note is gone: the Task goes back to having no file.
-      return { ...task, notePath: null };
+      return { task: { ...task, notePath: null }, content: null };
     }
     const body = parseNote(current)?.body ?? "";
-    await fileStore.write(
-      task.notePath,
-      formatNote({ id: task.id, done: task.done, due: task.due, body }),
-    );
-    return task;
+    const content = formatNote({
+      id: task.id,
+      done: task.done,
+      due: task.due,
+      body,
+    });
+    await fileStore.write(task.notePath, content);
+    return { task, content };
+  }
+
+  /** Records a Note content change so Sync can detect it. */
+  async function recordNoteContent(task: Task, content: string): Promise<void> {
+    if (task.notePath === null) {
+      return;
+    }
+    const vaultPath = await localStore.getVaultPath();
+    await recordNoteChange(localStore, {
+      id: task.id,
+      path: relativePath(vaultPath ?? task.notePath, task.notePath),
+      content,
+      deleted: false,
+      createdAt: task.createdAt,
+      updatedAt: now().toISOString(),
+    });
+  }
+
+  /** Records a Note deletion so its tombstone reaches the other devices. */
+  async function recordNoteDeletion(task: Task): Promise<void> {
+    if (task.notePath === null) {
+      return;
+    }
+    const vaultPath = await localStore.getVaultPath();
+    await recordNoteChange(localStore, {
+      id: task.id,
+      path: relativePath(vaultPath ?? task.notePath, task.notePath),
+      content: "",
+      deleted: true,
+      createdAt: task.createdAt,
+      updatedAt: now().toISOString(),
+    });
   }
 
   return {
@@ -167,7 +206,11 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
     async setTaskDone(id, done) {
       const task = await requireTask(id);
       const changed = touch({ ...task, done });
-      return save(await rewriteNote(changed));
+      const { task: rewritten, content } = await rewriteNote(changed);
+      if (content !== null) {
+        await recordNoteContent(rewritten, content);
+      }
+      return save(rewritten);
     },
 
     async updateTask(id, changes: UpdateTaskInput) {
@@ -196,19 +239,18 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
           folderOf(changed.notePath),
         );
         const body = parseNote(current)?.body ?? "";
-        await fileStore.write(
-          path,
-          formatNote({
-            id: changed.id,
-            done: changed.done,
-            due: changed.due,
-            body,
-          }),
-        );
+        const content = formatNote({
+          id: changed.id,
+          done: changed.done,
+          due: changed.due,
+          body,
+        });
+        await fileStore.write(path, content);
         if (path !== changed.notePath) {
           await fileStore.remove(changed.notePath);
         }
         changed = { ...changed, notePath: path };
+        await recordNoteContent(changed, content);
       }
       return save(changed);
     },
@@ -218,6 +260,7 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
       // The Note belongs to the Task; deleting the Task must not leave an
       // orphan `.md` that a later Vault scan would bring back.
       if (task.notePath !== null) {
+        await recordNoteDeletion(task);
         await fileStore.remove(task.notePath);
       }
       await localStore.saveTask(
@@ -236,16 +279,21 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
 
       const current = await fileStore.read(path);
       const body = current === null ? "" : (parseNote(current)?.body ?? "");
-      await fileStore.write(
-        path,
-        formatNote({ id: task.id, done: task.done, due: task.due, body }),
-      );
+      const content = formatNote({
+        id: task.id,
+        done: task.done,
+        due: task.due,
+        body,
+      });
+      await fileStore.write(path, content);
 
       if (task.notePath !== null && task.notePath !== path) {
         await fileStore.remove(task.notePath);
       }
 
-      return save({ ...task, notePath: path });
+      const promoted = { ...task, notePath: path };
+      await recordNoteContent(promoted, content);
+      return save(promoted);
     },
 
     async sync() {

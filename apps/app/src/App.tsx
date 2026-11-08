@@ -11,8 +11,13 @@ import {
   type FormEvent,
 } from "react";
 import { AuthPanel } from "./auth/AuthPanel";
+import { supabase } from "./auth/supabaseClient";
+import { useSession } from "./auth/useSession";
+import { loadDeviceIdentity, setDeviceHome } from "./device";
 import { createFileStore } from "./file-store";
+import { createSupabaseRemoteStore } from "./supabase-remote-store";
 import { createTauriLocalStore } from "./tauri-local-store";
+import { useSync } from "./use-sync";
 import { useVaultWatch } from "./use-vault-watch";
 
 function errorMessage(error: unknown): string {
@@ -30,13 +35,35 @@ function formatDue(due: string): string {
 export function App() {
   const [core, setCore] = useState<TaskManager | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
+  const { session } = useSession();
 
   useEffect(() => {
     let active = true;
 
     createTauriLocalStore()
-      .then((localStore) => {
-        if (active) {
+      .then(async (localStore) => {
+        if (!active) {
+          return;
+        }
+
+        // The device where a Vault was chosen is the Home; it stays Home.
+        const device = loadDeviceIdentity();
+        if ((await localStore.getVaultPath()) !== null) {
+          setDeviceHome();
+          device.kind = "home";
+        }
+
+        const client = supabase;
+        if (client !== null && session !== null) {
+          setCore(
+            createTaskManager({
+              localStore,
+              fileStore: createFileStore(),
+              remoteStore: createSupabaseRemoteStore(client),
+              device,
+            }),
+          );
+        } else {
           setCore(
             createTaskManager({
               localStore,
@@ -54,7 +81,10 @@ export function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [session]);
+
+  const signedIn = supabase !== null && session !== null;
+  useSync(core, signedIn);
 
   if (startupError !== null) {
     return (
@@ -122,6 +152,8 @@ function Todo({ core }: { core: TaskManager }) {
       try {
         await action();
         await refresh();
+        // Push the change to Sync right away (a no-op when signed out).
+        await core.sync().catch(() => {});
         setError(null);
         return true;
       } catch (cause) {
@@ -129,7 +161,7 @@ function Todo({ core }: { core: TaskManager }) {
         return false;
       }
     },
-    [refresh],
+    [core, refresh],
   );
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
@@ -146,6 +178,7 @@ function Todo({ core }: { core: TaskManager }) {
       setText("");
       setDue("");
       await refresh();
+      await core.sync().catch(() => {});
       setError(null);
     } catch (cause) {
       setError(errorMessage(cause));
