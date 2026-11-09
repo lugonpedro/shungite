@@ -1,0 +1,245 @@
+/*
+ * Read-only Vault explorer and Note view. New UI lives in this file (and its
+ * components) so shared styles.css stays small; only the sidebar column
+ * behavior is adjusted, by override.
+ */
+
+.sidebar__nav {
+  flex: none;
+}
+
+.sidebar__footer {
+  margin-top: auto;
+}
+
+.vault {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 6px;
+}
+
+.vault__label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 4px 6px;
+  text-transform: uppercase;
+}
+
+.vault__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vault__row {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  font-weight: 400;
+  gap: 6px;
+  line-height: var(--row-height);
+  min-height: var(--row-height);
+  padding-bottom: 0;
+  padding-right: 6px;
+  padding-top: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.vault__row:hover:not(:disabled) {
+  background: var(--field);
+  color: var(--text);
+}
+
+.vault__row--folder {
+  color: var(--text);
+}
+
+.vault__row--note {
+  color: var(--text);
+}
+
+.vault__row--active,
+.vault__row--active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--text);
+}
+
+.vault__row--unmanaged {
+  color: var(--done);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.vault__row--unmanaged:hover {
+  background: transparent;
+}
+
+.vault__chevron {
+  color: var(--muted);
+  flex: none;
+  font-size: 10px;
+  text-align: center;
+  width: 12px;
+}
+
+.vault__file-icon {
+  color: var(--muted);
+  flex: none;
+}
+
+.vault__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault__badge {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: 4px;
+  color: var(--warning);
+  flex: none;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+}
+
+.vault__invite {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+
+.vault__invite button {
+  width: 100%;
+}
+
+.vault__hint,
+.vault__muted {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.vault__hint code {
+  font-size: 11.5px;
+}
+
+.vault__error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-size: 12px;
+  margin: 4px;
+  padding: 6px 8px;
+}
+
+.note__header {
+  align-items: flex-start;
+}
+
+.note__header h1 {
+  overflow-wrap: anywhere;
+}
+
+.note__meta {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px;
+  margin: 4px 0 0;
+}
+
+.note__readonly {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.note {
+  line-height: 1.6;
+  margin-top: 16px;
+  max-width: 68ch;
+  overflow-wrap: anywhere;
+}
+
+.md__heading {
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+}
+
+.note > .md > .md__heading:first-child {
+  margin-top: 0;
+}
+
+.md__paragraph {
+  margin: 0.7em 0;
+}
+
+.md__list {
+  margin: 0.6em 0;
+  padding-left: 1.4em;
+}
+
+.md__item {
+  margin: 0.15em 0;
+}
+
+.md__item::marker {
+  color: var(--muted);
+}
+
+.md__checkbox {
+  accent-color: var(--accent);
+  margin: 0 6px 0 0;
+  transform: translateY(1px);
+}
+
+.md__quote {
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+  margin: 0.8em 0;
+  padding-left: 12px;
+}
+
+.md__code {
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  overflow-x: auto;
+  padding: 10px 12px;
+}
+
+.md__code code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.md__rule {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.4em 0;
+}
+
+.note a {
+  color: var(--accent);
+}
