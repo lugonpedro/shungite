@@ -1,6 +1,6 @@
 import type { TaskManager } from "@taskmanager/core";
 import { useEffect } from "react";
-import { watchVault } from "./file-store";
+import { platform } from "./platform";
 
 /**
  * Reconciles external Vault edits into Tasks and refreshes the UI whenever a
@@ -18,7 +18,7 @@ export function useVaultWatch(core: TaskManager, onReconcile: () => void): void 
         if (!active || path === null) {
           return;
         }
-        return watchVault(path, () => {
+        return platform.watchVault(path, () => {
           void core.reconcileVault().then(() => {
             if (active) {
               onReconcile();
