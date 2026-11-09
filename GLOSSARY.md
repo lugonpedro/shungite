@@ -31,7 +31,7 @@ O dispositivo onde o Vault foi criado e onde os `.md` reais moram, normalmente o
 _Avoid_: Principal, servidor, master
 
 **Satellite**:
-Qualquer outro dispositivo com uma cópia sincronizada do Vault, como o iPhone.
+Qualquer outro dispositivo com uma cópia sincronizada do Vault, como o iPhone. O PWA na web é sempre Satellite: guarda as Notes no navegador (IndexedDB), sem pasta de Vault.
 _Avoid_: Secundário, cliente, réplica
 
 **Conflict copy**:
