@@ -55,9 +55,13 @@ desktop já sair com Sync ligado, crie `apps/app/.env.local` (ignorado pelo git)
 com as credenciais do projeto Supabase hospedado **antes** do `tauri build`:
 
 ```bash
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-public-key>
+cp apps/app/.env.example apps/app/.env.local
+# edite o .env.local com a URL e a anon key do projeto hospedado
 ```
+
+O modelo com os placeholders (e os valores do Supabase local nos comentários)
+fica em [`apps/app/.env.example`](../apps/app/.env.example). Ele não contém
+nenhuma chave real; o `.env.local` é ignorado pelo git.
 
 Sem essas variáveis o app compila e roda, mas o painel de conta mostra
 "Sync desligado". O login no desktop é por magic link, com o código de 6 dígitos
@@ -160,7 +164,8 @@ Pontos de atenção:
   install reclamar de `@taskmanager/core`, use Install Command
   `cd ../.. && pnpm install --frozen-lockfile` e habilite a opção de incluir
   arquivos fora do Root Directory no build.
-- **Environment Variables** (Production e Preview):
+- **Environment Variables** (Production e Preview), com os mesmos nomes do
+  modelo [`apps/app/.env.example`](../apps/app/.env.example):
   - `VITE_SUPABASE_URL` = Project URL do Supabase
   - `VITE_SUPABASE_ANON_KEY` = anon/public key
 
