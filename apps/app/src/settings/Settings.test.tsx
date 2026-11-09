@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { version } from "../../package.json";
 import { Settings } from "./Settings";
 
 vi.mock("../auth/AuthPanel", () => ({
@@ -48,5 +49,22 @@ describe("Settings no build web", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Vault" })).not.toBeNull();
+  });
+
+  it("mostra a versão do app vinda do package.json", () => {
+    render(
+      <Settings
+        canChooseVault={false}
+        notice={null}
+        onChooseVault={noop}
+        onUseDefaultVault={noop}
+        showVault={false}
+        suggestedPath={null}
+        syncState="on"
+        vaultPath={null}
+      />,
+    );
+
+    expect(screen.getByText(`Versão ${version}`)).not.toBeNull();
   });
 });
