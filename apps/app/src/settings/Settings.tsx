@@ -7,6 +7,8 @@ interface SettingsProps {
   suggestedPath: string | null;
   notice: string | null;
   syncState: SyncState;
+  /** When the last successful Sync round finished, for the status label. */
+  lastSyncedAt?: Date | null;
   /**
    * False on iOS: the Vault lives in the app sandbox and is fed only by Sync,
    * so there is no folder to suggest or pick.
@@ -35,6 +37,7 @@ export function Settings({
   suggestedPath,
   notice,
   syncState,
+  lastSyncedAt = null,
   canChooseVault,
   showVault,
   onUseDefaultVault,
@@ -138,7 +141,7 @@ export function Settings({
                   : "settings__sync-state"
               }
             >
-              {syncLabel(syncState)}
+              {syncLabel(syncState, lastSyncedAt)}
             </strong>
           </p>
           <AuthPanel />

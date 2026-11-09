@@ -74,6 +74,9 @@ function adoptRemote(remote: RemoteTask, existing: Task | null): Task {
  */
 export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   const { localStore, fileStore, remoteStore, device, now, newId } = deps;
+  // The device identity is stable for the whole session; registering it on
+  // every polling cycle was one idle write per cycle for no benefit.
+  let deviceRegistered = false;
 
   async function push(task: Task): Promise<void> {
     await remoteStore.upsertTask(taskToRemote(task));
@@ -305,14 +308,19 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   }
 
   async function sync(): Promise<void> {
-    const stamp = now().toISOString();
-    await remoteStore.registerDevice({
-      id: device.id,
-      name: device.name,
-      kind: device.kind,
-      createdAt: stamp,
-      updatedAt: stamp,
-    });
+    if (!deviceRegistered) {
+      const stamp = now().toISOString();
+      await remoteStore.registerDevice({
+        id: device.id,
+        name: device.name,
+        kind: device.kind,
+        createdAt: stamp,
+        updatedAt: stamp,
+      });
+      // Only mark it done after the remote accepted it, so a failed first
+      // attempt is retried by the next cycle.
+      deviceRegistered = true;
+    }
 
     await syncTasks();
     await syncNotes();

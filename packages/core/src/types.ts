@@ -137,8 +137,19 @@ export interface Shungite {
   deleteTask(id: string): Promise<void>;
   /** Creates the Task's Note in the Vault and rewrites it on later changes. */
   promoteTask(id: string): Promise<Task>;
+  /**
+   * Points Sync at a remote store, or turns it off with `null`. Only the Sync
+   * engine is rebuilt; the LocalStore, Vault and pending work stay untouched.
+   */
+  setRemoteStore(remoteStore: RemoteStore | null): void;
   /** Syncs Tasks with the remote store; a no-op without a `RemoteStore`. */
   sync(): Promise<void>;
+  /**
+   * Whether this device has local changes still waiting to reach the remote
+   * (a Task or Note whose `version` is ahead of its `baseVersion`). Always
+   * false without a `RemoteStore`.
+   */
+  hasPendingSync(): Promise<boolean>;
   /**
    * Reconciles external edits to the Vault into Tasks: frontmatter changes
    * update `done`/`due`, a rename updates `text`, a deleted `.md` undoes the

@@ -40,18 +40,14 @@ interface DeviceRow {
  * `supabase/migrations` (`tasks`, `notes` and `devices`, all with RLS by
  * `user_id`). The authenticated user is scoped automatically by RLS; writes
  * still set `user_id` explicitly so the insert policy passes.
+ *
+ * The caller passes the session's `userId`, so writes never call
+ * `auth.getUser()`: one fewer network request per write.
  */
 export function createSupabaseRemoteStore(
   client: SupabaseClient,
+  userId: string,
 ): RemoteStore {
-  async function userId(): Promise<string> {
-    const { data, error } = await client.auth.getUser();
-    if (error || data.user === null) {
-      throw new Error("Sign in before enabling Sync.");
-    }
-    return data.user.id;
-  }
-
   return {
     async listTasks() {
       const { data, error } = await client.from("tasks").select("*");
@@ -73,7 +69,7 @@ export function createSupabaseRemoteStore(
     async upsertTask(task) {
       const { error } = await client.from("tasks").upsert({
         id: task.id,
-        user_id: await userId(),
+        user_id: userId,
         title: task.title,
         done: task.done,
         due: task.due,
@@ -104,7 +100,7 @@ export function createSupabaseRemoteStore(
     async upsertNote(note) {
       const { error } = await client.from("notes").upsert({
         id: note.id,
-        user_id: await userId(),
+        user_id: userId,
         path: note.path,
         content: note.content,
         version: note.version,
@@ -134,7 +130,7 @@ export function createSupabaseRemoteStore(
       // the `set_updated_at` trigger, so they are not sent here.
       const { error } = await client.from("devices").upsert({
         id: device.id,
-        user_id: await userId(),
+        user_id: userId,
         name: device.name,
         kind: device.kind,
       });

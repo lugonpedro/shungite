@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createShungite, type Shungite } from "./index";
-import type { DeviceInfo } from "./remote-store";
+import type { DeviceInfo, RemoteStore } from "./remote-store";
 import {
   createMemoryFileStore,
   createMemoryLocalStore,
@@ -174,5 +174,44 @@ describe("Sync", () => {
     expect(remoteStore.devices.get(satelliteDevice.id)).toMatchObject({
       kind: "satellite",
     });
+  });
+
+  it("registers the device once per engine, not on every cycle", async () => {
+    const remoteStore = createMemoryRemoteStore();
+    let registrations = 0;
+    const counting: RemoteStore = {
+      ...remoteStore,
+      async registerDevice(device) {
+        registrations += 1;
+        await remoteStore.registerDevice(device);
+      },
+    };
+    const core = createShungite({
+      localStore: createMemoryLocalStore(),
+      fileStore: createMemoryFileStore(),
+      remoteStore: counting,
+      device: homeDevice,
+    });
+
+    await core.sync();
+    await core.sync();
+    await core.sync();
+    expect(registrations).toBe(1);
+
+    // A new session gets a fresh engine, so it registers once again.
+    core.setRemoteStore(counting);
+    await core.sync();
+    expect(registrations).toBe(2);
+  });
+
+  it("reports pending local work until a round pushes it", async () => {
+    const { home } = setup();
+
+    await expect(home.hasPendingSync()).resolves.toBe(false);
+    await home.createTask({ text: "Buy milk" });
+    await expect(home.hasPendingSync()).resolves.toBe(true);
+
+    await home.sync();
+    await expect(home.hasPendingSync()).resolves.toBe(false);
   });
 });
