@@ -18,6 +18,8 @@ import { supabase } from "./auth/supabaseClient";
 import { useSession } from "./auth/useSession";
 import { loadDeviceIdentity, setDeviceHome } from "./device";
 import { createFileStore } from "./file-store";
+import { ensureIOSVault } from "./ios-vault";
+import { isIOS } from "./platform";
 import { createSupabaseRemoteStore } from "./supabase-remote-store";
 import { createTauriLocalStore } from "./tauri-local-store";
 import { useSync } from "./use-sync";
@@ -81,9 +83,13 @@ export function App() {
           return;
         }
 
+        // The iOS Vault lives in the app sandbox and is fed only by Sync.
+        await ensureIOSVault(localStore);
+
         // The device where a Vault was chosen is the Home; it stays Home.
+        // iOS is always a Satellite, even though its sandbox Vault exists.
         const device = loadDeviceIdentity();
-        if ((await localStore.getVaultPath()) !== null) {
+        if (!isIOS() && (await localStore.getVaultPath()) !== null) {
           setDeviceHome();
           device.kind = "home";
         }
@@ -250,6 +256,8 @@ function Todo({ core }: { core: TaskManager }) {
 
   const deleteTask = (id: string) => run(() => core.deleteTask(id));
 
+  const promoteTask = (id: string) => run(() => core.promoteTask(id));
+
   const open = tasks.filter((task) => !task.done).length;
   const done = tasks.length - open;
 
@@ -304,6 +312,7 @@ function Todo({ core }: { core: TaskManager }) {
             <TaskItem
               key={task.id}
               onDelete={deleteTask}
+              onPromote={promoteTask}
               onToggle={toggleTask}
               onUpdate={updateTask}
               task={task}
@@ -320,9 +329,16 @@ interface TaskItemProps {
   onToggle: (id: string, done: boolean) => Promise<boolean>;
   onUpdate: (id: string, changes: UpdateTaskInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  onPromote: (id: string) => Promise<boolean>;
 }
 
-function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
+function TaskItem({
+  task,
+  onToggle,
+  onUpdate,
+  onDelete,
+  onPromote,
+}: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(task.text);
   const [draftDue, setDraftDue] = useState(task.due ?? "");
@@ -415,6 +431,20 @@ function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) {
         <time className="task__due" dateTime={task.due}>
           {formatDue(task.due)}
         </time>
+      )}
+      {task.notePath === null ? (
+        <button
+          aria-label={`Promover ${task.text} para Note`}
+          className="button--ghost task__action"
+          onClick={() => void onPromote(task.id)}
+          type="button"
+        >
+          Promover
+        </button>
+      ) : (
+        <span className="task__note" title="Já promovida: Note no Vault">
+          .md
+        </span>
       )}
       <button
         aria-label={`Editar ${task.text}`}

@@ -73,6 +73,34 @@ describe("Note sync", () => {
     });
   });
 
+  it("moves a Note renamed on the Home instead of leaving a stale copy on the Satellite", async () => {
+    const { home, satellite, homeFileStore, satelliteFileStore } = setup();
+    await withVaults(home, satellite);
+
+    const task = await home.createTask({ text: "Write report" });
+    await home.promoteTask(task.id);
+    await syncBoth(home, satellite);
+
+    // The user renames the file outside the app, e.g. in Obsidian.
+    const content = (await homeFileStore.read("/vault/Write report.md")) ?? "";
+    await homeFileStore.write("/vault/Write report v2.md", content);
+    await homeFileStore.remove("/vault/Write report.md");
+    await home.reconcileVault();
+
+    await syncBoth(home, satellite);
+
+    expect(satelliteFileStore.files.has("/sat-vault/Write report.md")).toBe(
+      false,
+    );
+    expect(satelliteFileStore.files.get("/sat-vault/Write report v2.md")).toBe(
+      content,
+    );
+    await expect(satellite.getTask(task.id)).resolves.toMatchObject({
+      text: "Write report v2",
+      notePath: "/sat-vault/Write report v2.md",
+    });
+  });
+
   it("applies a Note edit made only on the Satellite to the Home", async () => {
     const { home, satellite, homeFileStore } = setup();
     await withVaults(home, satellite);

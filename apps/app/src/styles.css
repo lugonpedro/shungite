@@ -287,6 +287,16 @@ button:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+.task__note {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 4px;
+  color: var(--accent);
+  flex: none;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
 .task__action {
   flex: none;
 }
@@ -322,4 +332,64 @@ button:focus-visible {
   border-radius: var(--radius);
   color: var(--danger);
   padding: 8px 10px;
+}
+
+/*
+ * iOS: a narrow viewport with safe-area insets. Keep the layout single-column
+ * and inset the chrome so the content is not hidden by the notch or the home
+ * indicator. Full iOS layout polish is out of scope for v1.
+ */
+@media (max-width: 640px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    border-bottom: 1px solid var(--border);
+    border-right: none;
+    flex-direction: row;
+    padding-top: env(safe-area-inset-top);
+    width: auto;
+  }
+
+  .sidebar__nav {
+    padding: 8px;
+  }
+
+  .sidebar__footer {
+    align-items: center;
+    border-top: none;
+    display: flex;
+    padding: 8px 12px;
+  }
+
+  .app {
+    max-width: none;
+    padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+  }
+
+  .add-form,
+  .task {
+    flex-wrap: wrap;
+  }
+
+  .add-form__text {
+    flex: 1 1 100%;
+  }
+
+  .task {
+    padding: 6px 10px;
+  }
+}
+
+/*
+ * iOS keeps the page zoomed after focusing an input whose font is below 16px.
+ * Match the input size on narrow screens so typing never rescales the app.
+ */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
