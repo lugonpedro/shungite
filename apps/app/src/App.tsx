@@ -158,7 +158,7 @@ export function App() {
         // iOS is always a Satellite, even though its sandbox Vault exists.
         const device = loadDeviceIdentity();
         const storedVaultPath = await localStore.getVaultPath();
-        if (!isIOS() && storedVaultPath !== null) {
+        if (!isIOS() && platform.canChooseVault && storedVaultPath !== null) {
           setDeviceHome();
           device.kind = "home";
         }
@@ -198,8 +198,9 @@ export function App() {
   }, [session]);
 
   useEffect(() => {
-    // iOS always uses the sandbox Vault fed by Sync: never suggest a folder.
-    if (isIOS()) {
+    // iOS always uses the sandbox Vault fed by Sync, and the web build has no
+    // real Vault: neither ever suggests a folder.
+    if (isIOS() || !platform.canChooseVault) {
       return;
     }
     let active = true;
@@ -343,7 +344,7 @@ export function App() {
     >
       {screen === "settings" ? (
         <Settings
-          canChooseVault={!isIOS()}
+          canChooseVault={platform.canChooseVault && !isIOS()}
           notice={settingsNotice}
           onChooseVault={chooseVault}
           onUseDefaultVault={useDefaultVault}

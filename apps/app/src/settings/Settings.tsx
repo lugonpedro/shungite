@@ -78,7 +78,7 @@ export function Settings({
             <p className="settings__hint">
               {canChooseVault
                 ? "A pasta do seu computador onde as Notes .md ficam."
-                : "No iPhone o Vault fica dentro do app e é alimentado só pelo Sync."}
+                : "Neste dispositivo as Notes ficam no armazenamento local do app e são alimentadas só pelo Sync."}
             </p>
 
             {vaultPath !== null ? (

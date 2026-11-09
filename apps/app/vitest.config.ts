@@ -2,6 +2,8 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitest/config";
 
+// Component tests need a DOM (jsdom); the IndexedDB adapter tests load
+// `fake-indexeddb/auto` themselves and run fine in the same environment.
 export default defineConfig({
   plugins: [react()],
   resolve: {

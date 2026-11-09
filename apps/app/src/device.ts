@@ -1,5 +1,5 @@
 import { uuidv7, type DeviceInfo } from "@taskmanager/core";
-import { isIOS } from "./platform";
+import { isIOS, platform } from "./platform";
 
 const DEVICE_ID_KEY = "taskmanager.device.id";
 const DEVICE_KIND_KEY = "taskmanager.device.kind";
@@ -30,14 +30,16 @@ export function loadDeviceIdentity(): DeviceInfo {
     localStorage.setItem(DEVICE_ID_KEY, id);
   }
   const stored = localStorage.getItem(DEVICE_KIND_KEY);
+  // iOS and the web build never own a Vault, so they can only be Satellites.
+  const satelliteOnly = isIOS() || !platform.canChooseVault;
   const kind: DeviceInfo["kind"] =
-    isIOS() || stored !== "home" ? "satellite" : "home";
+    satelliteOnly || stored !== "home" ? "satellite" : "home";
   return { id, name: deviceName(), kind };
 }
 
 /** Marks this device as the Home; call once the user chooses a Vault here. */
 export function setDeviceHome(): void {
-  if (isIOS()) {
+  if (isIOS() || !platform.canChooseVault) {
     return;
   }
   localStorage.setItem(DEVICE_KIND_KEY, "home");

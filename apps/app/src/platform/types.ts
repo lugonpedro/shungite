@@ -7,6 +7,11 @@ export interface Platform {
    * and signs in with a 6-digit code first (see ADR 0002).
    */
   readonly target: "tauri" | "web";
+  /**
+   * Whether the target has a real Vault folder the user chooses (Tauri). The
+   * web build has none, so it is always a Satellite and never the Home.
+   */
+  canChooseVault: boolean;
   createLocalStore(): Promise<LocalStore>;
   createFileStore(): FileStore;
   watchVault(path: string, onChange: () => void): Promise<() => void>;
