@@ -382,6 +382,7 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
+  const dueInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
@@ -451,6 +452,24 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
     [core, onVaultChanged, refresh],
   );
 
+  /** Opens the native date picker from the calendar icon button. */
+  function openDuePicker() {
+    const input = dueInputRef.current;
+    if (input === null) {
+      return;
+    }
+    if (typeof input.showPicker === "function") {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Fall through to focusing the field when the picker is unavailable.
+      }
+    }
+    input.focus();
+    input.click();
+  }
+
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = text.trim();
@@ -518,23 +537,50 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
       )}
 
       <form className="add-form" onSubmit={addTask}>
-        <input
-          aria-label="Nova tarefa"
-          autoFocus
-          className="add-form__text"
-          onChange={(event) => setText(event.target.value)}
-          placeholder="O que precisa ser feito?"
-          ref={addInputRef}
-          value={text}
-        />
-        <input
-          aria-label="Data de vencimento (opcional)"
-          className="add-form__due"
-          onChange={(event) => setDue(event.target.value)}
-          type="date"
-          value={due}
-        />
-        <button disabled={text.trim() === ""} type="submit">
+        <div className="add-form__row">
+          <input
+            aria-label="Nova tarefa"
+            autoFocus
+            className="add-form__text"
+            onChange={(event) => setText(event.target.value)}
+            placeholder="O que precisa ser feito?"
+            ref={addInputRef}
+            value={text}
+          />
+          <div className="add-form__due">
+            <input
+              aria-hidden="true"
+              className="add-form__due-input"
+              onChange={(event) => setDue(event.target.value)}
+              ref={dueInputRef}
+              tabIndex={-1}
+              type="date"
+              value={due}
+            />
+            <button
+              aria-label={
+                due === ""
+                  ? "Escolher data de vencimento (opcional)"
+                  : `Data de vencimento: ${formatDue(due)}`
+              }
+              className={
+                due === ""
+                  ? "add-form__due-button"
+                  : "add-form__due-button add-form__due-button--set"
+              }
+              onClick={openDuePicker}
+              title="Data de vencimento (opcional)"
+              type="button"
+            >
+              <CalendarIcon />
+            </button>
+          </div>
+        </div>
+        <button
+          className="add-form__submit"
+          disabled={text.trim() === ""}
+          type="submit"
+        >
           Adicionar
         </button>
       </form>
@@ -798,6 +844,25 @@ function TaskMenu({
         </div>
       )}
     </div>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.5"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <rect height="18" rx="2" width="18" x="3" y="4" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
   );
 }
 

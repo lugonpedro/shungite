@@ -253,12 +253,54 @@ button:disabled {
 
 .add-form {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 12px 0 16px;
 }
 
+.add-form__row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
 .add-form__text {
   flex: 1;
+  min-width: 0;
+}
+
+.add-form__due {
+  flex: none;
+  position: relative;
+}
+
+.add-form__due-input {
+  height: 100%;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+}
+
+.add-form__due-button {
+  align-items: center;
+  background: var(--field);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  padding: 0 9px;
+  width: auto;
+}
+
+.add-form__due-button--set {
+  color: var(--accent);
+}
+
+.add-form__submit {
+  width: 100%;
 }
 
 input[type="text"],
@@ -484,16 +526,8 @@ button:focus-visible {
     padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
   }
 
-  .add-form,
   .task {
     flex-wrap: wrap;
-  }
-
-  .add-form__text {
-    flex: 1 1 100%;
-  }
-
-  .task {
     padding: 6px 10px;
   }
 }
