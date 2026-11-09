@@ -56,6 +56,10 @@ interface LayoutProps {
   screen: Screen;
   syncState: SyncState;
   onNavigate: (screen: Screen) => void;
+  /** Whether the hamburger menu (small screens only) is open. */
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
   /** The Vault tree, shown under the To-Do item. */
   vaultExplorer?: ReactNode;
   children: ReactNode;
@@ -65,11 +69,17 @@ interface LayoutProps {
  * The app's two areas: a narrow sidebar with the To-Do item, the Vault tree
  * and the Sync indicator at the bottom, and the main area with the current
  * screen. The sidebar footer shows the real Sync state and opens Configurações.
+ *
+ * On small screens the sidebar is a drawer hidden behind a hamburger button;
+ * picking any destination (or tapping outside) closes it.
  */
-function Layout({
+export function Layout({
   screen,
   syncState,
   onNavigate,
+  menuOpen,
+  onToggleMenu,
+  onCloseMenu,
   vaultExplorer,
   children,
 }: LayoutProps) {
@@ -82,9 +92,72 @@ function Layout({
           ? " sync-status--syncing"
           : "";
 
+  // Escape closes the drawer; a wider viewport (desktop) closes it too, so the
+  // state never comes back stale when the layout changes.
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        onCloseMenu();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen, onCloseMenu]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const desktop = window.matchMedia("(min-width: 641px)");
+    if (typeof desktop.addEventListener !== "function") {
+      return;
+    }
+
+    function onChange() {
+      if (desktop.matches) {
+        onCloseMenu();
+      }
+    }
+
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, [onCloseMenu]);
+
+  function navigate(next: Screen) {
+    onCloseMenu();
+    onNavigate(next);
+  }
+
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <button
+        aria-controls="app-sidebar"
+        aria-expanded={menuOpen}
+        aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+        className="menu-toggle"
+        onClick={onToggleMenu}
+        type="button"
+      >
+        {menuOpen ? <CloseIcon /> : <MenuIcon />}
+      </button>
+      <div
+        aria-hidden="true"
+        className={
+          menuOpen
+            ? "sidebar__backdrop sidebar__backdrop--open"
+            : "sidebar__backdrop"
+        }
+        onClick={onCloseMenu}
+      />
+      <aside
+        className={menuOpen ? "sidebar sidebar--open" : "sidebar"}
+        id="app-sidebar"
+      >
         <nav aria-label="Navegação" className="sidebar__nav">
           <button
             aria-current={screen === "todo" ? "page" : undefined}
@@ -93,7 +166,7 @@ function Layout({
                 ? "sidebar__item sidebar__item--active"
                 : "sidebar__item"
             }
-            onClick={() => onNavigate("todo")}
+            onClick={() => navigate("todo")}
             type="button"
           >
             To-Do
@@ -107,7 +180,7 @@ function Layout({
               ? "sidebar__footer sidebar__footer--active"
               : "sidebar__footer"
           }
-          onClick={() => onNavigate("settings")}
+          onClick={() => navigate("settings")}
           type="button"
         >
           <span className={`sync-status${syncModifier}`}>
@@ -127,6 +200,40 @@ function Layout({
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.75"
+      viewBox="0 0 24 24"
+      width="20"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.75"
+      viewBox="0 0 24 24"
+      width="20"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 export function App() {
   const [core, setCore] = useState<Shungite | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
@@ -136,6 +243,7 @@ export function App() {
   );
   const [screen, setScreen] = useState<Screen>("todo");
   const [notePath, setNotePath] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [vaultRevision, setVaultRevision] = useState(0);
   const [pendingPromoteId, setPendingPromoteId] = useState<string | null>(null);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
@@ -231,6 +339,7 @@ export function App() {
   }, [todoNotice]);
 
   const navigate = useCallback((next: Screen) => {
+    setMenuOpen(false);
     setScreen(next);
     if (next !== "note") {
       setNotePath(null);
@@ -241,8 +350,12 @@ export function App() {
     }
   }, []);
 
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const toggleMenu = useCallback(() => setMenuOpen((current) => !current), []);
+
   /** Opens a managed Note in the read-only view. */
   const openNote = useCallback((path: string) => {
+    setMenuOpen(false);
     setNotePath(path);
     setScreen("note");
   }, []);
@@ -315,7 +428,10 @@ export function App() {
   if (startupError !== null) {
     return (
       <Layout
+        menuOpen={menuOpen}
+        onCloseMenu={closeMenu}
         onNavigate={navigate}
+        onToggleMenu={toggleMenu}
         screen={screen}
         syncState={syncState}
         vaultExplorer={vaultExplorer}
@@ -329,7 +445,14 @@ export function App() {
 
   if (core === null) {
     return (
-      <Layout onNavigate={navigate} screen={screen} syncState={syncState}>
+      <Layout
+        menuOpen={menuOpen}
+        onCloseMenu={closeMenu}
+        onNavigate={navigate}
+        onToggleMenu={toggleMenu}
+        screen={screen}
+        syncState={syncState}
+      >
         <p className="muted">Carregando…</p>
       </Layout>
     );
@@ -337,7 +460,10 @@ export function App() {
 
   return (
     <Layout
+      menuOpen={menuOpen}
+      onCloseMenu={closeMenu}
       onNavigate={navigate}
+      onToggleMenu={toggleMenu}
       screen={screen}
       syncState={syncState}
       vaultExplorer={vaultExplorer}

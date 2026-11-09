@@ -75,6 +75,16 @@ button:disabled {
   min-height: 100vh;
 }
 
+/*
+ * The hamburger button and the click-away backdrop only exist on small
+ * screens; the media query at the bottom turns them on and the sidebar into
+ * a drawer. On desktop the sidebar is always visible.
+ */
+.menu-toggle,
+.sidebar__backdrop {
+  display: none;
+}
+
 .sidebar {
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -495,20 +505,74 @@ button:focus-visible {
 }
 
 /*
- * iOS: a narrow viewport with safe-area insets. Keep the layout single-column
- * with the sidebar on top and inset the chrome so content is not hidden by the
- * notch or the home indicator. Full iOS layout polish is out of scope for v1.
+ * Small screens and the iOS PWA: the sidebar becomes a drawer behind the
+ * hamburger button. It is hidden (and removed from the tab order) until the
+ * button opens it; tapping the backdrop, choosing an item or pressing Escape
+ * closes it again.
  */
 @media (max-width: 640px) {
   .app-shell {
-    flex-direction: column;
+    display: block;
+  }
+
+  .menu-toggle {
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    color: var(--text);
+    display: flex;
+    height: 40px;
+    justify-content: center;
+    left: 12px;
+    min-height: 40px;
+    padding: 0;
+    position: fixed;
+    top: calc(10px + env(safe-area-inset-top));
+    width: 40px;
+    z-index: 60;
+  }
+
+  .sidebar__backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 0.2s ease;
+    z-index: 30;
+  }
+
+  .sidebar__backdrop--open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .sidebar {
-    border-bottom: 1px solid var(--border);
-    border-right: none;
-    padding-top: env(safe-area-inset-top);
-    width: auto;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    bottom: 0;
+    box-shadow: 2px 0 18px rgba(0, 0, 0, 0.45);
+    left: 0;
+    max-width: 320px;
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: calc(60px + env(safe-area-inset-top));
+    position: fixed;
+    top: 0;
+    transform: translateX(-100%);
+    transition:
+      transform 0.2s ease,
+      visibility 0.2s ease;
+    visibility: hidden;
+    width: min(82vw, 320px);
+    z-index: 40;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+    visibility: visible;
   }
 
   .sidebar__nav {
@@ -517,13 +581,14 @@ button:focus-visible {
   }
 
   .vault {
-    flex: 0 1 auto;
-    max-height: 30vh;
+    flex: 1 1 auto;
+    max-height: none;
   }
 
   .app {
     max-width: none;
-    padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+    padding: calc(60px + env(safe-area-inset-top)) 16px
+      calc(32px + env(safe-area-inset-bottom));
   }
 
   .task {
