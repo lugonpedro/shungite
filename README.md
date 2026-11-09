@@ -105,7 +105,7 @@ Inicia os serviços locais do Supabase (Postgres, Auth, Realtime etc.) usando a 
 
 As migrations ficam em `supabase/migrations/` (tabelas `tasks`, `notes` e `devices`, todas com RLS por `user_id`).
 
-### Login no app (magic link)
+### Login no app
 
 O Sync é opcional: sem as variáveis abaixo o app roda só com dados locais e o painel de conta mostra "Sync desligado".
 
@@ -115,7 +115,14 @@ cp apps/app/.env.example apps/app/.env.local
 pnpm app:web   # ou pnpm app:dev
 ```
 
-O login é por magic link: digite o e-mail, abra o link recebido (ou use o código de 6 dígitos mostrado no e-mail) e o Sync liga. No Supabase local os e-mails não saem de verdade: aparecem no Mailpit em `http://127.0.0.1:54324`. O botão "Sair" encerra a sessão e o app volta a funcionar só localmente.
+No build web (PWA no iPhone) o login é por código de 6 dígitos: digite o
+e-mail, envie e cole o código do e-mail dentro do app. O magic link continua no
+e-mail como opção secundária, mas no iPhone ele abre no Safari, fora do PWA
+instalado. No app Tauri o magic link segue como caminho principal. A sessão fica
+salva no dispositivo, então o PWA continua conectado ao reabrir. No Supabase
+local os e-mails não saem de verdade: aparecem no Mailpit em
+`http://127.0.0.1:54324`. O botão "Sair" encerra a sessão e o app volta a
+funcionar só localmente.
 
 ## Documentação
 
