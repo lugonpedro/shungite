@@ -57,6 +57,10 @@ interface LayoutProps {
   syncState: SyncState;
   lastSyncedAt: Date | null;
   onNavigate: (screen: Screen) => void;
+  /** Whether the hamburger menu (small screens only) is open. */
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
   /** The Vault tree, shown under the To-Do item. */
   vaultExplorer?: ReactNode;
   children: ReactNode;
@@ -66,12 +70,18 @@ interface LayoutProps {
  * The app's two areas: a narrow sidebar with the To-Do item, the Vault tree
  * and the Sync indicator at the bottom, and the main area with the current
  * screen. The sidebar footer shows the real Sync state and opens Configurações.
+ *
+ * On small screens the sidebar is a drawer hidden behind a hamburger button;
+ * picking any destination (or tapping outside) closes it.
  */
-function Layout({
+export function Layout({
   screen,
   syncState,
   lastSyncedAt,
   onNavigate,
+  menuOpen,
+  onToggleMenu,
+  onCloseMenu,
   vaultExplorer,
   children,
 }: LayoutProps) {
@@ -84,9 +94,72 @@ function Layout({
           ? " sync-status--syncing"
           : "";
 
+  // Escape closes the drawer; a wider viewport (desktop) closes it too, so the
+  // state never comes back stale when the layout changes.
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        onCloseMenu();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen, onCloseMenu]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const desktop = window.matchMedia("(min-width: 641px)");
+    if (typeof desktop.addEventListener !== "function") {
+      return;
+    }
+
+    function onChange() {
+      if (desktop.matches) {
+        onCloseMenu();
+      }
+    }
+
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, [onCloseMenu]);
+
+  function navigate(next: Screen) {
+    onCloseMenu();
+    onNavigate(next);
+  }
+
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <button
+        aria-controls="app-sidebar"
+        aria-expanded={menuOpen}
+        aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+        className="menu-toggle"
+        onClick={onToggleMenu}
+        type="button"
+      >
+        {menuOpen ? <CloseIcon /> : <MenuIcon />}
+      </button>
+      <div
+        aria-hidden="true"
+        className={
+          menuOpen
+            ? "sidebar__backdrop sidebar__backdrop--open"
+            : "sidebar__backdrop"
+        }
+        onClick={onCloseMenu}
+      />
+      <aside
+        className={menuOpen ? "sidebar sidebar--open" : "sidebar"}
+        id="app-sidebar"
+      >
         <nav aria-label="Navegação" className="sidebar__nav">
           <button
             aria-current={screen === "todo" ? "page" : undefined}
@@ -95,7 +168,7 @@ function Layout({
                 ? "sidebar__item sidebar__item--active"
                 : "sidebar__item"
             }
-            onClick={() => onNavigate("todo")}
+            onClick={() => navigate("todo")}
             type="button"
           >
             To-Do
@@ -109,7 +182,7 @@ function Layout({
               ? "sidebar__footer sidebar__footer--active"
               : "sidebar__footer"
           }
-          onClick={() => onNavigate("settings")}
+          onClick={() => navigate("settings")}
           type="button"
         >
           <span className={`sync-status${syncModifier}`}>
@@ -129,6 +202,40 @@ function Layout({
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.75"
+      viewBox="0 0 24 24"
+      width="20"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.75"
+      viewBox="0 0 24 24"
+      width="20"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 export function App() {
   const [core, setCore] = useState<Shungite | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
@@ -141,6 +248,7 @@ export function App() {
   );
   const [screen, setScreen] = useState<Screen>("todo");
   const [notePath, setNotePath] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [vaultRevision, setVaultRevision] = useState(0);
   const [pendingPromoteId, setPendingPromoteId] = useState<string | null>(null);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
@@ -253,6 +361,7 @@ export function App() {
   }, [todoNotice]);
 
   const navigate = useCallback((next: Screen) => {
+    setMenuOpen(false);
     setScreen(next);
     if (next !== "note") {
       setNotePath(null);
@@ -263,8 +372,12 @@ export function App() {
     }
   }, []);
 
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const toggleMenu = useCallback(() => setMenuOpen((current) => !current), []);
+
   /** Opens a managed Note in the read-only view. */
   const openNote = useCallback((path: string) => {
+    setMenuOpen(false);
     setNotePath(path);
     setScreen("note");
   }, []);
@@ -337,7 +450,10 @@ export function App() {
   if (startupError !== null) {
     return (
       <Layout
+        menuOpen={menuOpen}
+        onCloseMenu={closeMenu}
         onNavigate={navigate}
+        onToggleMenu={toggleMenu}
         screen={screen}
         syncState={syncState}
         lastSyncedAt={lastSyncedAt}
@@ -353,10 +469,13 @@ export function App() {
   if (core === null) {
     return (
       <Layout
-        lastSyncedAt={lastSyncedAt}
+        menuOpen={menuOpen}
+        onCloseMenu={closeMenu}
         onNavigate={navigate}
+        onToggleMenu={toggleMenu}
         screen={screen}
         syncState={syncState}
+        lastSyncedAt={lastSyncedAt}
       >
         <p className="muted">Carregando…</p>
       </Layout>
@@ -365,7 +484,10 @@ export function App() {
 
   return (
     <Layout
+      menuOpen={menuOpen}
+      onCloseMenu={closeMenu}
       onNavigate={navigate}
+      onToggleMenu={toggleMenu}
       screen={screen}
       syncState={syncState}
       lastSyncedAt={lastSyncedAt}
@@ -423,6 +545,7 @@ function Todo({
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
+  const dueInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
@@ -493,6 +616,24 @@ function Todo({
     [core, onSyncRequest, onVaultChanged, refresh],
   );
 
+  /** Opens the native date picker from the calendar icon button. */
+  function openDuePicker() {
+    const input = dueInputRef.current;
+    if (input === null) {
+      return;
+    }
+    if (typeof input.showPicker === "function") {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Fall through to focusing the field when the picker is unavailable.
+      }
+    }
+    input.focus();
+    input.click();
+  }
+
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = text.trim();
@@ -560,23 +701,50 @@ function Todo({
       )}
 
       <form className="add-form" onSubmit={addTask}>
-        <input
-          aria-label="Nova tarefa"
-          autoFocus
-          className="add-form__text"
-          onChange={(event) => setText(event.target.value)}
-          placeholder="O que precisa ser feito?"
-          ref={addInputRef}
-          value={text}
-        />
-        <input
-          aria-label="Data de vencimento (opcional)"
-          className="add-form__due"
-          onChange={(event) => setDue(event.target.value)}
-          type="date"
-          value={due}
-        />
-        <button disabled={text.trim() === ""} type="submit">
+        <div className="add-form__row">
+          <input
+            aria-label="Nova tarefa"
+            autoFocus
+            className="add-form__text"
+            onChange={(event) => setText(event.target.value)}
+            placeholder="O que precisa ser feito?"
+            ref={addInputRef}
+            value={text}
+          />
+          <div className="add-form__due">
+            <input
+              aria-hidden="true"
+              className="add-form__due-input"
+              onChange={(event) => setDue(event.target.value)}
+              ref={dueInputRef}
+              tabIndex={-1}
+              type="date"
+              value={due}
+            />
+            <button
+              aria-label={
+                due === ""
+                  ? "Escolher data de vencimento (opcional)"
+                  : `Data de vencimento: ${formatDue(due)}`
+              }
+              className={
+                due === ""
+                  ? "add-form__due-button"
+                  : "add-form__due-button add-form__due-button--set"
+              }
+              onClick={openDuePicker}
+              title="Data de vencimento (opcional)"
+              type="button"
+            >
+              <CalendarIcon />
+            </button>
+          </div>
+        </div>
+        <button
+          className="add-form__submit"
+          disabled={text.trim() === ""}
+          type="submit"
+        >
           Adicionar
         </button>
       </form>
@@ -840,6 +1008,25 @@ function TaskMenu({
         </div>
       )}
     </div>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.5"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <rect height="18" rx="2" width="18" x="3" y="4" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
   );
 }
 
