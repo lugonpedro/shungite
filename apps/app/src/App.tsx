@@ -23,13 +23,15 @@ import { createSupabaseRemoteStore } from "./supabase-remote-store";
 import { createTauriLocalStore } from "./tauri-local-store";
 import { syncLabel, useSync, type SyncState } from "./use-sync";
 import { useVaultWatch } from "./use-vault-watch";
+import { NoteView } from "./vault/NoteView";
+import { VaultExplorer } from "./vault/VaultExplorer";
 import {
   chooseVaultFolder,
   defaultVaultPath,
   ensureVaultFolder,
 } from "./vault-path";
 
-type Screen = "todo" | "settings";
+type Screen = "todo" | "note" | "settings";
 
 const PROMOTE_NEEDS_VAULT_NOTICE = "Escolha o Vault para promover";
 
@@ -59,15 +61,23 @@ interface LayoutProps {
   screen: Screen;
   syncState: SyncState;
   onNavigate: (screen: Screen) => void;
+  /** The Vault tree, shown under the To-Do item. */
+  vaultExplorer?: ReactNode;
   children: ReactNode;
 }
 
 /**
- * The app's two areas: a narrow sidebar with the To-Do item and the Sync
- * indicator at the bottom, and the main area with the current screen. The
- * sidebar footer shows the real Sync state and opens Configurações.
+ * The app's two areas: a narrow sidebar with the To-Do item, the Vault tree
+ * and the Sync indicator at the bottom, and the main area with the current
+ * screen. The sidebar footer shows the real Sync state and opens Configurações.
  */
-function Layout({ screen, syncState, onNavigate, children }: LayoutProps) {
+function Layout({
+  screen,
+  syncState,
+  onNavigate,
+  vaultExplorer,
+  children,
+}: LayoutProps) {
   const syncModifier =
     syncState === "on"
       ? " sync-status--on"
@@ -94,6 +104,7 @@ function Layout({ screen, syncState, onNavigate, children }: LayoutProps) {
             To-Do
           </button>
         </nav>
+        {vaultExplorer}
         <button
           aria-current={screen === "settings" ? "page" : undefined}
           className={
@@ -129,6 +140,8 @@ export function App() {
     null,
   );
   const [screen, setScreen] = useState<Screen>("todo");
+  const [notePath, setNotePath] = useState<string | null>(null);
+  const [vaultRevision, setVaultRevision] = useState(0);
   const [pendingPromoteId, setPendingPromoteId] = useState<string | null>(null);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
   const [todoNotice, setTodoNotice] = useState<string | null>(null);
@@ -215,10 +228,24 @@ export function App() {
 
   const navigate = useCallback((next: Screen) => {
     setScreen(next);
+    if (next !== "note") {
+      setNotePath(null);
+    }
     if (next === "todo") {
       setPendingPromoteId(null);
       setSettingsNotice(null);
     }
+  }, []);
+
+  /** Opens a managed Note in the read-only view. */
+  const openNote = useCallback((path: string) => {
+    setNotePath(path);
+    setScreen("note");
+  }, []);
+
+  /** Asks the Vault tree to reload after the app itself changed the Vault. */
+  const bumpVault = useCallback(() => {
+    setVaultRevision((current) => current + 1);
   }, []);
 
   const requestVaultForPromote = useCallback((taskId: string) => {
@@ -238,6 +265,7 @@ export function App() {
       setDeviceHome();
       setVaultPath(path);
       setSettingsNotice(null);
+      bumpVault();
 
       const pending = pendingPromoteId;
       setPendingPromoteId(null);
@@ -246,9 +274,10 @@ export function App() {
         await core.sync().catch(() => {});
         setTodoNotice("Task promovida para o Vault.");
         setScreen("todo");
+        bumpVault();
       }
     },
-    [core, pendingPromoteId],
+    [bumpVault, core, pendingPromoteId],
   );
 
   const useDefaultVault = useCallback(async (): Promise<void> => {
@@ -267,9 +296,26 @@ export function App() {
     await applyVault(chosen);
   }, [applyVault]);
 
+  const vaultExplorer =
+    core === null ? undefined : (
+      <VaultExplorer
+        core={core}
+        onOpenNote={openNote}
+        onOpenSettings={() => navigate("settings")}
+        revision={vaultRevision}
+        selectedPath={notePath}
+        vaultPath={vaultPath}
+      />
+    );
+
   if (startupError !== null) {
     return (
-      <Layout onNavigate={navigate} screen={screen} syncState={syncState}>
+      <Layout
+        onNavigate={navigate}
+        screen={screen}
+        syncState={syncState}
+        vaultExplorer={vaultExplorer}
+      >
         <p className="error" role="alert">
           Não foi possível abrir o banco local: {startupError}
         </p>
@@ -286,7 +332,12 @@ export function App() {
   }
 
   return (
-    <Layout onNavigate={navigate} screen={screen} syncState={syncState}>
+    <Layout
+      onNavigate={navigate}
+      screen={screen}
+      syncState={syncState}
+      vaultExplorer={vaultExplorer}
+    >
       {screen === "settings" ? (
         <Settings
           notice={settingsNotice}
@@ -296,10 +347,13 @@ export function App() {
           syncState={syncState}
           vaultPath={vaultPath}
         />
+      ) : screen === "note" && notePath !== null ? (
+        <NoteView core={core} path={notePath} revision={vaultRevision} />
       ) : (
         <Todo
           core={core}
           notice={todoNotice}
+          onVaultChanged={bumpVault}
           onVaultRequired={requestVaultForPromote}
         />
       )}
@@ -311,9 +365,11 @@ interface TodoProps {
   core: TaskManager;
   notice: string | null;
   onVaultRequired: (taskId: string) => void;
+  /** Called after a Promote or a Note rewrite, so the Vault tree refreshes. */
+  onVaultChanged: () => void;
 }
 
-function Todo({ core, notice, onVaultRequired }: TodoProps) {
+function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -378,6 +434,7 @@ function Todo({ core, notice, onVaultRequired }: TodoProps) {
         await refresh();
         // Push the change to Sync right away (a no-op when signed out).
         await core.sync().catch(() => {});
+        onVaultChanged();
         setError(null);
         return true;
       } catch (cause) {
@@ -385,7 +442,7 @@ function Todo({ core, notice, onVaultRequired }: TodoProps) {
         return false;
       }
     },
-    [core, refresh],
+    [core, onVaultChanged, refresh],
   );
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
@@ -423,6 +480,7 @@ function Todo({ core, notice, onVaultRequired }: TodoProps) {
       await core.promoteTask(id);
       await refresh();
       await core.sync().catch(() => {});
+      onVaultChanged();
       setError(null);
     } catch (cause) {
       if (isVaultRequired(cause)) {

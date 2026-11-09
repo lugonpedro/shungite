@@ -58,6 +58,45 @@ export interface FileStore {
   list(dir: string): Promise<string[]>;
 }
 
+/** The Vault's `.md` files grouped into folders, read-only. */
+export interface VaultTree {
+  /** Absolute path of the Vault root. */
+  path: string;
+  entries: VaultTreeEntry[];
+}
+
+export interface VaultTreeFolder {
+  kind: "folder";
+  /** Folder name as it appears on disk. */
+  name: string;
+  /** Absolute path of the folder. */
+  path: string;
+  children: VaultTreeEntry[];
+}
+
+export interface VaultTreeNote {
+  kind: "note";
+  /** File name without the `.md` extension. */
+  name: string;
+  /** Absolute path of the `.md` file. */
+  path: string;
+  /** Whether the app manages the file (its frontmatter has an `id`). */
+  managed: boolean;
+  /** Whether the file is a Conflict copy (`Nome (conflito).md`). */
+  conflict: boolean;
+}
+
+export type VaultTreeEntry = VaultTreeFolder | VaultTreeNote;
+
+/** A managed Note's text, read on demand for the read-only view. */
+export interface VaultNote {
+  path: string;
+  title: string;
+  body: string;
+  done: boolean;
+  due: string | null;
+}
+
 export interface CreateTaskInput {
   text: string;
   due?: string | null;
@@ -106,6 +145,16 @@ export interface TaskManager {
    * Promote, and `.md` files without an `id` are ignored.
    */
   reconcileVault(): Promise<ReconcileResult>;
+  /**
+   * The Vault's `.md` files as a folder tree, without reading their contents.
+   * Returns null when no Vault has been chosen.
+   */
+  listVaultTree(): Promise<VaultTree | null>;
+  /**
+   * Reads a managed Note's body for the read-only view. A `.md` the app does
+   * not manage (no `id`) is never read and resolves to null.
+   */
+  readNote(path: string): Promise<VaultNote | null>;
 }
 
 export interface ReconcileResult {
