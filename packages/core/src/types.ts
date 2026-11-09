@@ -43,6 +43,13 @@ export interface LocalStore {
   saveNote(note: NoteSyncState): Promise<void>;
   getVaultPath(): Promise<string | null>;
   saveVaultPath(path: string | null): Promise<void>;
+  /**
+   * The last remote `updated_at` this device pulled for a table, or null when
+   * the next Sync round must read everything. Kept per table (and per remote
+   * scope) so incremental Sync resumes after a restart.
+   */
+  getSyncCursor(table: string): Promise<string | null>;
+  saveSyncCursor(table: string, cursor: string | null): Promise<void>;
 }
 
 /** Persistence for the `.md` files inside the Vault. */

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createShungite, type Shungite } from "./index";
-import type { DeviceInfo, RemoteStore } from "./remote-store";
+import type {
+  DeviceInfo,
+  RemoteNote,
+  RemoteStore,
+  RemoteTask,
+} from "./remote-store";
 import {
   createMemoryFileStore,
   createMemoryLocalStore,
@@ -213,5 +218,141 @@ describe("Sync", () => {
 
     await home.sync();
     await expect(home.hasPendingSync()).resolves.toBe(false);
+  });
+});
+
+/** A deterministic timestamp, far enough apart to make cursors unambiguous. */
+function at(seconds: number): string {
+  return new Date(Date.UTC(2026, 0, 1, 0, 0, seconds)).toISOString();
+}
+
+function remoteTask(
+  id: string,
+  updatedAt: string,
+  overrides: Partial<RemoteTask> = {},
+): RemoteTask {
+  return {
+    id,
+    title: id,
+    done: false,
+    due: null,
+    version: 1,
+    deleted: false,
+    createdAt: updatedAt,
+    updatedAt,
+    ...overrides,
+  };
+}
+
+function remoteNote(
+  id: string,
+  updatedAt: string,
+  overrides: Partial<RemoteNote> = {},
+): RemoteNote {
+  return {
+    id,
+    path: `${id}.md`,
+    content: id,
+    version: 1,
+    deleted: false,
+    createdAt: updatedAt,
+    updatedAt,
+    ...overrides,
+  };
+}
+
+describe("incremental Sync cursor", () => {
+  it("reads everything on the first round, then only the task delta and tombstones", async () => {
+    const remote = createMemoryRemoteStore();
+    const taskSince: Array<string | undefined> = [];
+    const store: RemoteStore = {
+      ...remote,
+      async listTasks(since) {
+        taskSince.push(since);
+        return remote.listTasks(since);
+      },
+    };
+    const localStore = createMemoryLocalStore();
+    const home = createShungite({
+      localStore,
+      fileStore: createMemoryFileStore(),
+      remoteStore: store,
+      device: homeDevice,
+    });
+
+    await remote.upsertTask(remoteTask("a", at(10)));
+    await remote.upsertTask(remoteTask("b", at(20)));
+
+    await home.sync();
+    // No cursor yet: the first round must read every row.
+    expect(taskSince).toEqual([undefined]);
+    expect((await home.listTasks()).map((task) => task.id).sort()).toEqual([
+      "a",
+      "b",
+    ]);
+    await expect(localStore.getSyncCursor("tasks")).resolves.toBe(at(20));
+
+    await remote.upsertTask(
+      remoteTask("b", at(30), { version: 2, title: "b updated" }),
+    );
+    await home.sync();
+    expect(taskSince).toEqual([undefined, at(20)]);
+    await expect(home.getTask("b")).resolves.toMatchObject({
+      text: "b updated",
+    });
+    await expect(localStore.getSyncCursor("tasks")).resolves.toBe(at(30));
+
+    // A tombstone is part of the delta, not filtered out: it must reach the
+    // device so a remote deletion is not resurrected by the next push.
+    await remote.upsertTask(
+      remoteTask("b", at(40), {
+        version: 3,
+        deleted: true,
+      }),
+    );
+    await home.sync();
+    expect(taskSince).toEqual([undefined, at(20), at(30)]);
+    expect((await home.listTasks()).map((task) => task.id)).toEqual(["a"]);
+    await expect(localStore.getTask("b")).resolves.toMatchObject({
+      deleted: true,
+    });
+  });
+
+  it("keeps a separate cursor per table and filters the notes delta", async () => {
+    const remote = createMemoryRemoteStore();
+    const noteSince: Array<string | undefined> = [];
+    const store: RemoteStore = {
+      ...remote,
+      async listNotes(since) {
+        noteSince.push(since);
+        return remote.listNotes(since);
+      },
+    };
+    const localStore = createMemoryLocalStore();
+    const home = createShungite({
+      localStore,
+      fileStore: createMemoryFileStore(),
+      remoteStore: store,
+      device: homeDevice,
+    });
+
+    await remote.upsertNote(remoteNote("n1", at(10)));
+    await remote.upsertNote(remoteNote("n2", at(20)));
+
+    await home.sync();
+    expect(noteSince).toEqual([undefined]);
+    await expect(localStore.getSyncCursor("notes")).resolves.toBe(at(20));
+    // Tasks had no delta, so their cursor is still absent.
+    await expect(localStore.getSyncCursor("tasks")).resolves.toBeNull();
+
+    await remote.upsertNote(
+      remoteNote("n1", at(30), { version: 2, content: "changed" }),
+    );
+    await home.sync();
+    expect(noteSince).toEqual([undefined, at(20)]);
+    await expect(localStore.getNote("n1")).resolves.toMatchObject({
+      content: "changed",
+    });
+    await expect(localStore.getSyncCursor("notes")).resolves.toBe(at(30));
   });
 });

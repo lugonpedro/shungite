@@ -136,6 +136,9 @@ export function App() {
   const [suggestedVaultPath, setSuggestedVaultPath] = useState<string | null>(
     null,
   );
+  const [suggestedVaultError, setSuggestedVaultError] = useState<string | null>(
+    null,
+  );
   const [screen, setScreen] = useState<Screen>("todo");
   const [notePath, setNotePath] = useState<string | null>(null);
   const [vaultRevision, setVaultRevision] = useState(0);
@@ -218,10 +221,14 @@ export function App() {
       .then((path) => {
         if (active) {
           setSuggestedVaultPath(path);
+          setSuggestedVaultError(null);
         }
       })
-      .catch(() => {
-        // Without the path API (e.g. plain web dev) the suggestion is disabled.
+      .catch((cause: unknown) => {
+        // Expose why the suggestion is unavailable instead of swallowing it.
+        if (active) {
+          setSuggestedVaultError(errorMessage(cause));
+        }
       });
     return () => {
       active = false;
@@ -232,8 +239,9 @@ export function App() {
   const {
     state: syncState,
     lastSyncedAt,
+    error: syncError,
     requestSync,
-  } = useSync(core, signedIn);
+  } = useSync(core, signedIn, supabase, userId);
 
   // The success notice is a short confirmation, not a permanent status.
   useEffect(() => {
@@ -372,6 +380,8 @@ export function App() {
           onUseDefaultVault={useDefaultVault}
           showVault={platform.target === "tauri"}
           suggestedPath={suggestedVaultPath}
+          suggestedPathError={suggestedVaultError}
+          syncError={syncError}
           syncState={syncState}
           vaultPath={vaultPath}
         />

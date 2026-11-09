@@ -78,6 +78,47 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   // every polling cycle was one idle write per cycle for no benefit.
   let deviceRegistered = false;
 
+  /** Cursor keys are per table and, when known, per signed-in account. */
+  function cursorKey(table: "tasks" | "notes"): string {
+    return remoteStore.scope === undefined
+      ? table
+      : `${table}:${remoteStore.scope}`;
+  }
+
+  async function readCursor(table: "tasks" | "notes"): Promise<string | null> {
+    try {
+      return await localStore.getSyncCursor(cursorKey(table));
+    } catch {
+      // A cursor read failure must never skip data: read everything instead.
+      return null;
+    }
+  }
+
+  /**
+   * The newest `updated_at` in a delta, which becomes the next cursor. It is
+   * only saved after the delta was fully applied, so a crash mid-round makes
+   * the next round re-read instead of skipping rows.
+   */
+  function newestUpdatedAt(items: Array<{ updatedAt: string }>): string | null {
+    let newest: string | null = null;
+    for (const item of items) {
+      if (newest === null || Date.parse(item.updatedAt) > Date.parse(newest)) {
+        newest = item.updatedAt;
+      }
+    }
+    return newest;
+  }
+
+  async function saveCursor(
+    table: "tasks" | "notes",
+    delta: Array<{ updatedAt: string }>,
+  ): Promise<void> {
+    const cursor = newestUpdatedAt(delta);
+    if (cursor !== null) {
+      await localStore.saveSyncCursor(cursorKey(table), cursor);
+    }
+  }
+
   async function push(task: Task): Promise<void> {
     await remoteStore.upsertTask(taskToRemote(task));
     await localStore.saveTask({ ...task, baseVersion: task.version });
@@ -192,7 +233,8 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   }
 
   async function syncTasks(): Promise<void> {
-    const remoteTasks = await remoteStore.listTasks();
+    const since = await readCursor("tasks");
+    const remoteTasks = await remoteStore.listTasks(since ?? undefined);
     const localTasks = await localStore.getTasks();
 
     const remoteById = new Map(remoteTasks.map((task) => [task.id, task]));
@@ -253,10 +295,13 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
         await push(local);
       }
     }
+
+    await saveCursor("tasks", remoteTasks);
   }
 
   async function syncNotes(): Promise<void> {
-    const remoteNotes = await remoteStore.listNotes();
+    const since = await readCursor("notes");
+    const remoteNotes = await remoteStore.listNotes(since ?? undefined);
     const localNotes = await localStore.getNotes();
 
     const remoteById = new Map(remoteNotes.map((note) => [note.id, note]));
@@ -305,6 +350,8 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
         await pushNote(local);
       }
     }
+
+    await saveCursor("notes", remoteNotes);
   }
 
   async function sync(): Promise<void> {

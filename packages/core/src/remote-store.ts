@@ -40,12 +40,24 @@ export interface RemoteDevice {
  * adapter; the core tests supply an in-memory adapter.
  */
 export interface RemoteStore {
-  listTasks(): Promise<RemoteTask[]>;
+  /**
+   * Tasks changed after `since` (an `updated_at` cursor), including
+   * tombstones. Without `since` it returns everything, which is what the first
+   * Sync round (or a cursor-less device) needs.
+   */
+  listTasks(since?: string): Promise<RemoteTask[]>;
   upsertTask(task: RemoteTask): Promise<void>;
-  listNotes(): Promise<RemoteNote[]>;
+  /** Notes changed after `since`; same cursor semantics as `listTasks`. */
+  listNotes(since?: string): Promise<RemoteNote[]>;
   upsertNote(note: RemoteNote): Promise<void>;
   listDevices(): Promise<RemoteDevice[]>;
   registerDevice(device: RemoteDevice): Promise<void>;
+  /**
+   * Identity that owns the data behind this store (the signed-in user id).
+   * Sync namespaces its locally stored cursors by it, so signing into another
+   * account never resumes from the previous account's cursor.
+   */
+  readonly scope?: string;
 }
 
 /** This device's identity for Sync. */

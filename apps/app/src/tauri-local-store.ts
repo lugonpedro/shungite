@@ -189,5 +189,26 @@ async function openStore(): Promise<LocalStore> {
         [VAULT_PATH_KEY, path],
       );
     },
+
+    async getSyncCursor(table) {
+      const rows = await db.select<{ value: string | null }[]>(
+        "SELECT value FROM settings WHERE key = $1",
+        [`sync_cursor:${table}`],
+      );
+      return rows[0]?.value ?? null;
+    },
+
+    async saveSyncCursor(table, cursor) {
+      const key = `sync_cursor:${table}`;
+      if (cursor === null) {
+        await db.execute("DELETE FROM settings WHERE key = $1", [key]);
+        return;
+      }
+      await db.execute(
+        `INSERT INTO settings (key, value) VALUES ($1, $2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        [key, cursor],
+      );
+    },
   };
 }

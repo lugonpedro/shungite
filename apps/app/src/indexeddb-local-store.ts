@@ -55,6 +55,10 @@ export function createIndexedDBLocalStore(
     await writeRecord(await connection(), SETTINGS_STORE, { key, value });
   }
 
+  function cursorSettingKey(table: string): string {
+    return `sync_cursor:${table}`;
+  }
+
   return {
     async getTask(id) {
       return (
@@ -100,6 +104,15 @@ export function createIndexedDBLocalStore(
 
     async saveVaultPath(path) {
       await saveSetting(VAULT_PATH_KEY, path);
+    },
+
+    async getSyncCursor(table) {
+      const setting = await readSetting(cursorSettingKey(table));
+      return setting === undefined ? null : setting.value;
+    },
+
+    async saveSyncCursor(table, cursor) {
+      await saveSetting(cursorSettingKey(table), cursor);
     },
   };
 }
