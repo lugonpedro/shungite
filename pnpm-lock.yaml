@@ -205,6 +205,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.2.1
         version: 6.2.1(vite@8.3.6(terser@5.51.2))
+      fake-indexeddb:
+        specifier: 6.2.7
+        version: 6.2.7
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -214,6 +217,9 @@ importers:
       vite-plugin-pwa:
         specifier: ^2.0.0
         version: 2.0.0(vite@8.3.6(terser@5.51.2))(workbox-build@7.4.1)(workbox-window@7.4.1)
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(vite@8.3.6(terser@5.51.2))
       workbox-build:
         specifier: ^7.4.1
         version: 7.4.1
@@ -228,7 +234,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(vite@8.3.6)
+        version: 5.1.0(vite@8.3.6(terser@5.51.2))
 
 packages:
 
@@ -1575,6 +1581,10 @@ packages:
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
+
+  fake-indexeddb@6.2.7:
+    resolution: {integrity: sha512-g0ghQ+BmU3CSZaHup5FigEAAtCmtNyxkrmID7OAeK2qONHghw1aQ2l2T1RxmfhP1H1tEXVRWArUTGVCk5832ww==}
+    engines: {node: '>=18'}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -3511,14 +3521,14 @@ snapshots:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.3.6(terser@5.51.2)
 
-  '@vitest/mocker@5.1.0(vite@8.3.6)':
+  '@vitest/mocker@5.1.0(vite@8.3.6(terser@5.51.2))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.1.0
       estree-walker: 3.0.3
       magic-string: 1.4.5
     optionalDependencies:
-      vite: 8.3.6
+      vite: 8.3.6(terser@5.51.2)
 
   '@vitest/spy@5.1.0': {}
 
@@ -3800,6 +3810,8 @@ snapshots:
   eta@4.6.0: {}
 
   expect-type@1.4.0: {}
+
+  fake-indexeddb@6.2.7: {}
 
   fast-deep-equal@3.1.3: {}
 
@@ -4594,16 +4606,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vite@8.3.6:
-    dependencies:
-      lightningcss: 1.33.0
-      picomatch: 4.0.7
-      postcss: 8.5.32
-      rolldown: 1.2.16
-      tinyglobby: 0.2.17
-    optionalDependencies:
-      fsevents: 2.3.3
-
   vite@8.3.6(terser@5.51.2):
     dependencies:
       lightningcss: 1.33.0
@@ -4615,10 +4617,10 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.51.2
 
-  vitest@5.1.0(vite@8.3.6):
+  vitest@5.1.0(vite@8.3.6(terser@5.51.2)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.1.0(vite@8.3.6)
+      '@vitest/mocker': 5.1.0(vite@8.3.6(terser@5.51.2))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -4629,7 +4631,7 @@ snapshots:
       tinybench: 6.2.3
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 8.3.6
+      vite: 8.3.6(terser@5.51.2)
       why-is-node-running: 3.2.1
     transitivePeerDependencies:
       - msw
