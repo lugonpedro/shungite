@@ -92,12 +92,16 @@ aplique-as com a Supabase CLI, na raiz do repositório:
 ```bash
 supabase login
 supabase link --project-ref <project-ref>
-supabase migration list   # confira o que é local e o que já está remoto
-supabase db push          # aplica as migrations pendentes no projeto hospedado
+supabase migration list --linked   # confira o que é local e o que já está remoto
+supabase db push --linked          # aplica as migrations pendentes no projeto hospedado
 ```
 
 Notas:
 
+- Na Supabase CLI 3.x, `supabase migration list` e `supabase db push` sem
+  `--linked` (ou `--remote`) usam o **stack local** por padrão. O comando
+  imprime `Target: local stack (127.0.0.1:54322)` quando isso acontece; confira
+  o alvo antes de concluir que o remoto foi atualizado.
 - `supabase db reset` e `supabase/seed.sql` são **só para o ambiente local**;
   não rode `db reset` contra o projeto hospedado.
 - `supabase/config.toml` (Site URL, redirects, template de e-mail) vale apenas
@@ -250,5 +254,6 @@ copy** (`Nome (conflito).md`), conforme o glossário e a ADR 0002.
 | E-mail chega sem código de 6 dígitos | Template hospedado ainda é o padrão | Copie `supabase/templates/magic_link.html` para o template Magic Link |
 | PWA branco após deploy | Build antigo/cache do service worker | Recarregue, feche e reabra; em último caso remova e reinstale o PWA |
 | Login funciona no Safari e não no app instalado | Link aberto fora do escopo do PWA | Use o código de 6 dígitos dentro do PWA |
-| Tabelas não existem no projeto hospedado | Migrations não aplicadas | `supabase link` + `supabase db push` |
+| Tabelas não existem no projeto hospedado | Migrations não aplicadas (ou `db push` foi para o stack local) | `supabase link` + `supabase db push --linked` |
+| Indicador mostra "Sync com erro" | Migrations não aplicadas no hospedado: faltam `tasks`, `notes` e `devices` | `supabase migration list --linked`; se o remoto estiver vazio, `supabase db push --linked` |
 | App desktop sem Sync | Build feito sem `.env.local` | Recrie `apps/app/.env.local` e rode `tauri build` de novo |
