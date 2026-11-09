@@ -8,6 +8,7 @@ import {
   type ShungiteDeps,
   type UpdateTaskInput,
 } from "./types";
+import type { RemoteStore } from "./remote-store";
 import { formatNote, joinPath, noteFileName, parseNote, relativePath } from "./note";
 import { recordNoteChange } from "./note-sync";
 import { createSyncEngine } from "./sync";
@@ -46,12 +47,13 @@ export function createShungite(deps: ShungiteDeps): Shungite {
   const newId =
     deps.newId ?? (() => uuidv7(deps.now ? deps.now() : new Date()));
 
-  const syncEngine =
-    deps.remoteStore !== undefined && deps.device !== undefined
+  let remoteStore: RemoteStore | undefined = deps.remoteStore;
+  let syncEngine =
+    remoteStore !== undefined && deps.device !== undefined
       ? createSyncEngine({
           localStore,
           fileStore,
-          remoteStore: deps.remoteStore,
+          remoteStore,
           device: deps.device,
           now,
           newId,
@@ -301,10 +303,37 @@ export function createShungite(deps: ShungiteDeps): Shungite {
       return save(promoted);
     },
 
+    setRemoteStore(next) {
+      remoteStore = next ?? undefined;
+      syncEngine =
+        remoteStore !== undefined && deps.device !== undefined
+          ? createSyncEngine({
+              localStore,
+              fileStore,
+              remoteStore,
+              device: deps.device,
+              now,
+              newId,
+            })
+          : null;
+    },
+
     async sync() {
       if (syncEngine !== null) {
         await syncEngine.sync();
       }
+    },
+
+    async hasPendingSync() {
+      if (syncEngine === null) {
+        return false;
+      }
+      const tasks = await localStore.getTasks();
+      if (tasks.some((task) => task.version > task.baseVersion)) {
+        return true;
+      }
+      const notes = await localStore.getNotes();
+      return notes.some((note) => note.version > note.baseVersion);
     },
 
     async reconcileVault() {

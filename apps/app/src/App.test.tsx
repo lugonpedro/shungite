@@ -10,6 +10,7 @@ function Harness({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <Layout
+      lastSyncedAt={null}
       menuOpen={menuOpen}
       onCloseMenu={() => setMenuOpen(false)}
       onNavigate={onNavigate}

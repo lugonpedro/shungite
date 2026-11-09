@@ -8,6 +8,12 @@ interface SettingsProps {
   suggestedPath: string | null;
   notice: string | null;
   syncState: SyncState;
+  /** When the last successful Sync round finished, for the status label. */
+  lastSyncedAt?: Date | null;
+  /** Message of the last failed Sync round, shown instead of swallowing it. */
+  syncError?: string | null;
+  /** Why the default Vault path could not be discovered, if it failed. */
+  suggestedPathError?: string | null;
   /**
    * False on iOS: the Vault lives in the app sandbox and is fed only by Sync,
    * so there is no folder to suggest or pick.
@@ -36,6 +42,9 @@ export function Settings({
   suggestedPath,
   notice,
   syncState,
+  lastSyncedAt = null,
+  syncError = null,
+  suggestedPathError = null,
   canChooseVault,
   showVault,
   onUseDefaultVault,
@@ -95,6 +104,12 @@ export function Settings({
               <p className="settings__current">O Vault do app ainda não foi criado.</p>
             )}
 
+            {suggestedPathError !== null && (
+              <p className="error" role="alert">
+                {suggestedPathError}
+              </p>
+            )}
+
             {canChooseVault && (
               <div className="settings__actions">
                 {!alreadyDefault && (
@@ -139,9 +154,14 @@ export function Settings({
                   : "settings__sync-state"
               }
             >
-              {syncLabel(syncState)}
+              {syncLabel(syncState, lastSyncedAt)}
             </strong>
           </p>
+          {syncError !== null && (
+            <p className="error" role="alert">
+              {syncError}
+            </p>
+          )}
           <AuthPanel />
         </section>
 

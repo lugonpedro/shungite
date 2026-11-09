@@ -55,6 +55,7 @@ function isVaultRequired(error: unknown): boolean {
 interface LayoutProps {
   screen: Screen;
   syncState: SyncState;
+  lastSyncedAt: Date | null;
   onNavigate: (screen: Screen) => void;
   /** Whether the hamburger menu (small screens only) is open. */
   menuOpen: boolean;
@@ -76,6 +77,7 @@ interface LayoutProps {
 export function Layout({
   screen,
   syncState,
+  lastSyncedAt,
   onNavigate,
   menuOpen,
   onToggleMenu,
@@ -185,7 +187,7 @@ export function Layout({
         >
           <span className={`sync-status${syncModifier}`}>
             <span aria-hidden="true" className="sync-status__dot" />
-            {syncLabel(syncState)}
+            {syncLabel(syncState, lastSyncedAt)}
           </span>
           <span className="sidebar__settings">
             <span aria-hidden="true" className="sidebar__settings-icon">
@@ -241,6 +243,9 @@ export function App() {
   const [suggestedVaultPath, setSuggestedVaultPath] = useState<string | null>(
     null,
   );
+  const [suggestedVaultError, setSuggestedVaultError] = useState<string | null>(
+    null,
+  );
   const [screen, setScreen] = useState<Screen>("todo");
   const [notePath, setNotePath] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -249,6 +254,7 @@ export function App() {
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
   const [todoNotice, setTodoNotice] = useState<string | null>(null);
   const { session } = useSession();
+  const userId = session?.user.id ?? null;
 
   useEffect(() => {
     let active = true;
@@ -275,24 +281,16 @@ export function App() {
         }
         setVaultPath(storedVaultPath);
 
-        const client = supabase;
-        if (client !== null && session !== null) {
-          setCore(
-            createShungite({
-              localStore,
-              fileStore: platform.createFileStore(),
-              remoteStore: createSupabaseRemoteStore(client),
-              device,
-            }),
-          );
-        } else {
-          setCore(
-            createShungite({
-              localStore,
-              fileStore: platform.createFileStore(),
-            }),
-          );
-        }
+        // The core (and its LocalStore) is created once. Sign-in and sign-out
+        // only swap the RemoteStore in the effect below, so an auth event
+        // never recreates the local state.
+        setCore(
+          createShungite({
+            localStore,
+            fileStore: platform.createFileStore(),
+            device,
+          }),
+        );
       })
       .catch((error: unknown) => {
         if (active) {
@@ -303,7 +301,22 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, []);
+
+  // Sign-in/sign-out only swaps the RemoteStore. Keyed by the user id, not the
+  // Session object: token refreshes produce a new object for the same user and
+  // must not rebuild Sync (or re-register the device).
+  useEffect(() => {
+    if (core === null) {
+      return;
+    }
+    const client = supabase;
+    if (client !== null && userId !== null) {
+      core.setRemoteStore(createSupabaseRemoteStore(client, userId));
+    } else {
+      core.setRemoteStore(null);
+    }
+  }, [core, userId]);
 
   useEffect(() => {
     // iOS always uses the sandbox Vault fed by Sync, and the web build has no
@@ -316,10 +329,14 @@ export function App() {
       .then((path) => {
         if (active) {
           setSuggestedVaultPath(path);
+          setSuggestedVaultError(null);
         }
       })
-      .catch(() => {
-        // Without the path API (e.g. plain web dev) the suggestion is disabled.
+      .catch((cause: unknown) => {
+        // Expose why the suggestion is unavailable instead of swallowing it.
+        if (active) {
+          setSuggestedVaultError(errorMessage(cause));
+        }
       });
     return () => {
       active = false;
@@ -327,7 +344,12 @@ export function App() {
   }, []);
 
   const signedIn = supabase !== null && session !== null;
-  const syncState = useSync(core, signedIn);
+  const {
+    state: syncState,
+    lastSyncedAt,
+    error: syncError,
+    requestSync,
+  } = useSync(core, signedIn, supabase, userId);
 
   // The success notice is a short confirmation, not a permanent status.
   useEffect(() => {
@@ -388,13 +410,13 @@ export function App() {
       setPendingPromoteId(null);
       if (pending !== null) {
         await core.promoteTask(pending);
-        await core.sync().catch(() => {});
+        requestSync();
         setTodoNotice("Task promovida para o Vault.");
         setScreen("todo");
         bumpVault();
       }
     },
-    [bumpVault, core, pendingPromoteId],
+    [bumpVault, core, pendingPromoteId, requestSync],
   );
 
   const useDefaultVault = useCallback(async (): Promise<void> => {
@@ -434,6 +456,7 @@ export function App() {
         onToggleMenu={toggleMenu}
         screen={screen}
         syncState={syncState}
+        lastSyncedAt={lastSyncedAt}
         vaultExplorer={vaultExplorer}
       >
         <p className="error" role="alert">
@@ -452,6 +475,7 @@ export function App() {
         onToggleMenu={toggleMenu}
         screen={screen}
         syncState={syncState}
+        lastSyncedAt={lastSyncedAt}
       >
         <p className="muted">Carregando…</p>
       </Layout>
@@ -466,16 +490,20 @@ export function App() {
       onToggleMenu={toggleMenu}
       screen={screen}
       syncState={syncState}
+      lastSyncedAt={lastSyncedAt}
       vaultExplorer={vaultExplorer}
     >
       {screen === "settings" ? (
         <Settings
           canChooseVault={platform.canChooseVault && !isIOS()}
+          lastSyncedAt={lastSyncedAt}
           notice={settingsNotice}
           onChooseVault={chooseVault}
           onUseDefaultVault={useDefaultVault}
           showVault={platform.target === "tauri"}
           suggestedPath={suggestedVaultPath}
+          suggestedPathError={suggestedVaultError}
+          syncError={syncError}
           syncState={syncState}
           vaultPath={vaultPath}
         />
@@ -485,6 +513,7 @@ export function App() {
         <Todo
           core={core}
           notice={todoNotice}
+          onSyncRequest={requestSync}
           onVaultChanged={bumpVault}
           onVaultRequired={requestVaultForPromote}
         />
@@ -499,9 +528,17 @@ interface TodoProps {
   onVaultRequired: (taskId: string) => void;
   /** Called after a Promote or a Note rewrite, so the Vault tree refreshes. */
   onVaultChanged: () => void;
+  /** Debounced, single-flight request to push local changes with Sync. */
+  onSyncRequest: () => void;
 }
 
-function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
+function Todo({
+  core,
+  notice,
+  onVaultRequired,
+  onVaultChanged,
+  onSyncRequest,
+}: TodoProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -565,8 +602,9 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
       try {
         await action();
         await refresh();
-        // Push the change to Sync right away (a no-op when signed out).
-        await core.sync().catch(() => {});
+        // Push the change to Sync after a short quiet period (a no-op when
+        // signed out).
+        onSyncRequest();
         onVaultChanged();
         setError(null);
         return true;
@@ -575,7 +613,7 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
         return false;
       }
     },
-    [core, onVaultChanged, refresh],
+    [core, onSyncRequest, onVaultChanged, refresh],
   );
 
   /** Opens the native date picker from the calendar icon button. */
@@ -610,7 +648,7 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
       setText("");
       setDue("");
       await refresh();
-      await core.sync().catch(() => {});
+      onSyncRequest();
       setError(null);
     } catch (cause) {
       setError(errorMessage(cause));
@@ -630,7 +668,7 @@ function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
     try {
       await core.promoteTask(id);
       await refresh();
-      await core.sync().catch(() => {});
+      onSyncRequest();
       onVaultChanged();
       setError(null);
     } catch (cause) {

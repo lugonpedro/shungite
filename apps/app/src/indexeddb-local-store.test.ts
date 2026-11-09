@@ -168,4 +168,26 @@ describe("IndexedDB LocalStore", () => {
       createIndexedDBLocalStore({ databaseName }).getVaultPath(),
     ).resolves.toBeNull();
   });
+
+  it("persists one Sync cursor per table and clears it with null", async () => {
+    const { databaseName, localStore } = setup();
+
+    await localStore.saveSyncCursor("tasks", "2026-01-01T00:00:00.000Z");
+    await localStore.saveSyncCursor("notes", "2026-01-02T00:00:00.000Z");
+
+    const reopened = createIndexedDBLocalStore({ databaseName });
+    await expect(reopened.getSyncCursor("tasks")).resolves.toBe(
+      "2026-01-01T00:00:00.000Z",
+    );
+    await expect(reopened.getSyncCursor("notes")).resolves.toBe(
+      "2026-01-02T00:00:00.000Z",
+    );
+    await expect(reopened.getSyncCursor("devices")).resolves.toBeNull();
+
+    await reopened.saveSyncCursor("tasks", null);
+    await expect(reopened.getSyncCursor("tasks")).resolves.toBeNull();
+    await expect(reopened.getSyncCursor("notes")).resolves.toBe(
+      "2026-01-02T00:00:00.000Z",
+    );
+  });
 });

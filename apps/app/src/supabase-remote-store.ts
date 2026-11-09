@@ -40,21 +40,27 @@ interface DeviceRow {
  * `supabase/migrations` (`tasks`, `notes` and `devices`, all with RLS by
  * `user_id`). The authenticated user is scoped automatically by RLS; writes
  * still set `user_id` explicitly so the insert policy passes.
+ *
+ * The caller passes the session's `userId`, so writes never call
+ * `auth.getUser()`: one fewer network request per write.
+ *
+ * `listTasks`/`listNotes` take an `updated_at` cursor and filter with
+ * `updated_at > cursor`, so a Sync round only reads what changed (tombstones
+ * included). The indexes on `(user_id, updated_at)` keep that cheap.
  */
 export function createSupabaseRemoteStore(
   client: SupabaseClient,
+  userId: string,
 ): RemoteStore {
-  async function userId(): Promise<string> {
-    const { data, error } = await client.auth.getUser();
-    if (error || data.user === null) {
-      throw new Error("Sign in before enabling Sync.");
-    }
-    return data.user.id;
-  }
-
   return {
-    async listTasks() {
-      const { data, error } = await client.from("tasks").select("*");
+    scope: userId,
+
+    async listTasks(since) {
+      let query = client.from("tasks").select("*");
+      if (since !== undefined) {
+        query = query.gt("updated_at", since);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return ((data ?? []) as TaskRow[]).map(
         (row): RemoteTask => ({
@@ -71,22 +77,28 @@ export function createSupabaseRemoteStore(
     },
 
     async upsertTask(task) {
+      // `updated_at` is intentionally omitted: the schema default (insert)
+      // and the `set_updated_at` trigger (update) write it from the server
+      // clock, which is what the incremental cursor must compare against.
       const { error } = await client.from("tasks").upsert({
         id: task.id,
-        user_id: await userId(),
+        user_id: userId,
         title: task.title,
         done: task.done,
         due: task.due,
         version: task.version,
         deleted: task.deleted,
         created_at: task.createdAt,
-        updated_at: task.updatedAt,
       });
       if (error) throw error;
     },
 
-    async listNotes() {
-      const { data, error } = await client.from("notes").select("*");
+    async listNotes(since) {
+      let query = client.from("notes").select("*");
+      if (since !== undefined) {
+        query = query.gt("updated_at", since);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return ((data ?? []) as NoteRow[]).map(
         (row): RemoteNote => ({
@@ -102,15 +114,15 @@ export function createSupabaseRemoteStore(
     },
 
     async upsertNote(note) {
+      // See `upsertTask`: the server owns `updated_at`.
       const { error } = await client.from("notes").upsert({
         id: note.id,
-        user_id: await userId(),
+        user_id: userId,
         path: note.path,
         content: note.content,
         version: note.version,
         deleted: note.deleted,
         created_at: note.createdAt,
-        updated_at: note.updatedAt,
       });
       if (error) throw error;
     },
@@ -134,7 +146,7 @@ export function createSupabaseRemoteStore(
       // the `set_updated_at` trigger, so they are not sent here.
       const { error } = await client.from("devices").upsert({
         id: device.id,
-        user_id: await userId(),
+        user_id: userId,
         name: device.name,
         kind: device.kind,
       });
