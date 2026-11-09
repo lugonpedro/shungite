@@ -18,6 +18,8 @@ import { supabase } from "./auth/supabaseClient";
 import { useSession } from "./auth/useSession";
 import { loadDeviceIdentity, setDeviceHome } from "./device";
 import { createFileStore } from "./file-store";
+import { ensureIOSVault } from "./ios-vault";
+import { isIOS } from "./platform";
 import { Settings } from "./settings/Settings";
 import { createSupabaseRemoteStore } from "./supabase-remote-store";
 import { createTauriLocalStore } from "./tauri-local-store";
@@ -156,10 +158,14 @@ export function App() {
           return;
         }
 
+        // The iOS Vault lives in the app sandbox and is fed only by Sync.
+        await ensureIOSVault(localStore);
+
         // The device where a Vault was chosen is the Home; it stays Home.
+        // iOS is always a Satellite, even though its sandbox Vault exists.
         const device = loadDeviceIdentity();
         const storedVaultPath = await localStore.getVaultPath();
-        if (storedVaultPath !== null) {
+        if (!isIOS() && storedVaultPath !== null) {
           setDeviceHome();
           device.kind = "home";
         }
@@ -199,6 +205,10 @@ export function App() {
   }, [session]);
 
   useEffect(() => {
+    // iOS always uses the sandbox Vault fed by Sync: never suggest a folder.
+    if (isIOS()) {
+      return;
+    }
     let active = true;
     defaultVaultPath()
       .then((path) => {
@@ -340,6 +350,7 @@ export function App() {
     >
       {screen === "settings" ? (
         <Settings
+          canChooseVault={!isIOS()}
           notice={settingsNotice}
           onChooseVault={chooseVault}
           onUseDefaultVault={useDefaultVault}

@@ -7,6 +7,11 @@ interface SettingsProps {
   suggestedPath: string | null;
   notice: string | null;
   syncState: SyncState;
+  /**
+   * False on iOS: the Vault lives in the app sandbox and is fed only by Sync,
+   * so there is no folder to suggest or pick.
+   */
+  canChooseVault: boolean;
   onUseDefaultVault: () => Promise<void>;
   onChooseVault: () => Promise<void>;
 }
@@ -25,6 +30,7 @@ export function Settings({
   suggestedPath,
   notice,
   syncState,
+  canChooseVault,
   onUseDefaultVault,
   onChooseVault,
 }: SettingsProps) {
@@ -61,39 +67,45 @@ export function Settings({
         <section aria-labelledby="vault-heading" className="settings__section">
           <h2 id="vault-heading">Vault</h2>
           <p className="settings__hint">
-            A pasta do seu computador onde as Notes <code>.md</code> ficam.
+            {canChooseVault
+              ? "A pasta do seu computador onde as Notes .md ficam."
+              : "No iPhone o Vault fica dentro do app e é alimentado só pelo Sync."}
           </p>
 
           {vaultPath !== null ? (
             <p className="settings__current">
               Pasta atual: <code>{vaultPath}</code>
             </p>
-          ) : (
+          ) : canChooseVault ? (
             <p className="settings__current">
               Nenhum Vault escolhido ainda. Sugestão:{" "}
               <code>~/Documents/TaskManager</code>
             </p>
+          ) : (
+            <p className="settings__current">O Vault do app ainda não foi criado.</p>
           )}
 
-          <div className="settings__actions">
-            {!alreadyDefault && (
+          {canChooseVault && (
+            <div className="settings__actions">
+              {!alreadyDefault && (
+                <button
+                  disabled={busy || suggestedPath === null}
+                  onClick={() => void run(onUseDefaultVault)}
+                  type="button"
+                >
+                  Usar ~/Documents/TaskManager
+                </button>
+              )}
               <button
-                disabled={busy || suggestedPath === null}
-                onClick={() => void run(onUseDefaultVault)}
+                className="button--ghost"
+                disabled={busy}
+                onClick={() => void run(onChooseVault)}
                 type="button"
               >
-                Usar ~/Documents/TaskManager
+                Escolher outra pasta…
               </button>
-            )}
-            <button
-              className="button--ghost"
-              disabled={busy}
-              onClick={() => void run(onChooseVault)}
-              type="button"
-            >
-              Escolher outra pasta…
-            </button>
-          </div>
+            </div>
+          )}
 
           {error !== null && (
             <p className="error" role="alert">

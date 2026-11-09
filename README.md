@@ -44,6 +44,55 @@ pnpm app:dev
 
 Requer Rust instalado (via `rustup`) e disponível no `PATH`. A primeira compilação do Rust pode levar alguns minutos; depois o app abre e recarrega em modo de desenvolvimento.
 
+### App iOS (simulador)
+
+O iPhone é um **Satellite**: o Vault vive no sandbox do app
+(`Library/Application Support/com.lugonpedro.taskmanager/vault`, criado no
+primeiro launch) e é alimentado só pelo Sync. O dispositivo nunca vira Home.
+
+Pré-requisitos, além dos do app desktop:
+
+- Xcode completo (não só as Command Line Tools) e o simulador de um iPhone.
+- Alvos Rust de iOS:
+  `rustup target add aarch64-apple-ios aarch64-apple-ios-sim`
+- [CocoaPods](https://cocoapods.org/) (`brew install cocoapods`).
+
+Se `xcode-select -p` aponta para as Command Line Tools, prefixe os comandos de
+Xcode com `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (não é
+preciso rodar `xcode-select -s`). O projeto Xcode nativo é gerado em
+`src-tauri/gen/` (ignorado pelo git); para recriá-lo:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  pnpm --filter @taskmanager/app tauri ios init
+```
+
+Rodar em modo de desenvolvimento (abre o Vite, compila e instala no simulador):
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  pnpm --filter @taskmanager/app tauri ios dev "iPhone 17"
+```
+
+Ou gerar o bundle e instalar pelo `simctl`:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  pnpm --filter @taskmanager/app tauri ios build --debug -t aarch64-sim
+
+xcrun simctl boot "iPhone 17"
+xcrun simctl install "iPhone 17" \
+  apps/app/src-tauri/gen/apple/build/arm64-sim/TaskManager.app
+xcrun simctl launch "iPhone 17" com.lugonpedro.taskmanager
+xcrun simctl io "iPhone 17" screenshot shot.png
+```
+
+Para o login, o mesmo magic link do desktop: no simulador, use o código de 6
+dígitos do e-mail (o deep link `tauri://localhost` não é necessário). Com
+`supabase start`, pegue o código no Mailpit em `http://127.0.0.1:54324`. A URL
+do Supabase local deve ser `http://127.0.0.1:54321`: o simulador compartilha a
+rede do Mac.
+
 ### Supabase local
 
 ```bash

@@ -155,6 +155,18 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
       await fileStore.write(absPath, remote.content);
     }
 
+    // A renamed Note changed its relative path. Drop this device's copy at the
+    // old path, otherwise the Vault keeps a stale duplicate that a later
+    // reconcile would link back to the same Task.
+    if (
+      !remote.deleted &&
+      local !== null &&
+      local.path !== remote.path &&
+      vaultPath !== null
+    ) {
+      await fileStore.remove(resolvePath(vaultPath, local.path));
+    }
+
     // Point the Task at the adopted Note file, or clear it when the Note is gone.
     const task = await localStore.getTask(remote.id);
     if (task !== null && !task.deleted) {
