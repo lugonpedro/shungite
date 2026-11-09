@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { version } from "../../package.json";
 import { AuthPanel } from "../auth/AuthPanel";
 import { syncLabel, type SyncState } from "../use-sync";
 
@@ -143,6 +144,8 @@ export function Settings({
           </p>
           <AuthPanel />
         </section>
+
+        <p className="settings__version">Versão {version}</p>
       </div>
     </>
   );
