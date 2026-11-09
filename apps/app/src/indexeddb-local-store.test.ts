@@ -1,10 +1,10 @@
 import "fake-indexeddb/auto";
 import {
-  createTaskManager,
+  createShungite,
   type FileStore,
   type LocalStore,
-  type TaskManager,
-} from "@taskmanager/core";
+  type Shungite,
+} from "@shungite/core";
 import { describe, expect, it } from "vitest";
 import { createIndexedDBFileStore } from "./indexeddb-file-store";
 import { createIndexedDBLocalStore } from "./indexeddb-local-store";
@@ -15,11 +15,11 @@ let sequence = 0;
 
 function uniqueDatabase(prefix: string): string {
   sequence += 1;
-  return `taskmanager-${prefix}-${Date.now()}-${sequence}`;
+  return `shungite-${prefix}-${Date.now()}-${sequence}`;
 }
 
 interface Opened {
-  core: TaskManager;
+  core: Shungite;
   localStore: LocalStore;
   fileStore: FileStore;
 }
@@ -31,7 +31,7 @@ function open(databaseName: string): Opened {
   });
   const fileStore = createIndexedDBFileStore({ databaseName });
   return {
-    core: createTaskManager({ localStore, fileStore }),
+    core: createShungite({ localStore, fileStore }),
     localStore,
     fileStore,
   };

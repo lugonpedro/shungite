@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "taskmanager"
+project_id = "shungite"
 
 [api]
 enabled = true
@@ -260,7 +260,7 @@ otp_expiry = 3600
 # Magic links also show a one-time code, so sign-in works inside the desktop
 # webview even when the e-mail link opens in a different browser.
 [auth.email.template.magic_link]
-subject = "Seu link de entrada no TaskManager"
+subject = "Seu link de entrada no Shungite"
 content_path = "./supabase/templates/magic_link.html"
 
 # Uncomment to customize notification email template

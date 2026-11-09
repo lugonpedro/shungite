@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskManager, type TaskManager } from "./index";
+import { createShungite, type Shungite } from "./index";
 import type { DeviceInfo } from "./remote-store";
 import {
   createMemoryFileStore,
@@ -20,13 +20,13 @@ const satelliteDevice: DeviceInfo = {
 
 function setup() {
   const remoteStore = createMemoryRemoteStore();
-  const home = createTaskManager({
+  const home = createShungite({
     localStore: createMemoryLocalStore(),
     fileStore: createMemoryFileStore(),
     remoteStore,
     device: homeDevice,
   });
-  const satellite = createTaskManager({
+  const satellite = createShungite({
     localStore: createMemoryLocalStore(),
     fileStore: createMemoryFileStore(),
     remoteStore,
@@ -36,7 +36,7 @@ function setup() {
 }
 
 /** A full round of Home and Satellite syncs, enough to reach a fixed point. */
-async function syncBoth(home: TaskManager, satellite: TaskManager) {
+async function syncBoth(home: Shungite, satellite: Shungite) {
   await home.sync();
   await satellite.sync();
   await home.sync();
@@ -110,14 +110,14 @@ describe("Sync", () => {
     const remoteStore = createMemoryRemoteStore();
     const homeClock = () => new Date("2026-01-01T00:00:00.000Z");
     const satelliteClock = () => new Date("2026-12-31T00:00:00.000Z");
-    const home = createTaskManager({
+    const home = createShungite({
       localStore: createMemoryLocalStore(),
       fileStore: createMemoryFileStore(),
       remoteStore,
       device: homeDevice,
       now: homeClock,
     });
-    const satellite = createTaskManager({
+    const satellite = createShungite({
       localStore: createMemoryLocalStore(),
       fileStore: createMemoryFileStore(),
       remoteStore,

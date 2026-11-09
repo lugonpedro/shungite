@@ -1,4 +1,4 @@
-import type { TaskManager } from "@taskmanager/core";
+import type { Shungite } from "@shungite/core";
 import { useEffect, useState } from "react";
 
 const SYNC_INTERVAL_MS = 15_000;
@@ -15,7 +15,7 @@ export type SyncState = "off" | "syncing" | "on" | "error";
  * After local changes, `App` calls `core.sync()` directly (a no-op without a
  * RemoteStore), so this hook owns the timer and the initial sync.
  */
-export function useSync(core: TaskManager | null, enabled: boolean): SyncState {
+export function useSync(core: Shungite | null, enabled: boolean): SyncState {
   const [state, setState] = useState<SyncState>(enabled ? "syncing" : "off");
 
   useEffect(() => {

@@ -107,7 +107,7 @@ export interface UpdateTaskInput {
   due?: string | null;
 }
 
-export interface TaskManagerDeps {
+export interface ShungiteDeps {
   localStore: LocalStore;
   fileStore: FileStore;
   /** Remote store and device identity; without them Sync stays off. */
@@ -119,7 +119,7 @@ export interface TaskManagerDeps {
   newId?: () => string;
 }
 
-export interface TaskManager {
+export interface Shungite {
   /** The chosen Vault folder, or null before the first Promote. */
   getVaultPath(): Promise<string | null>;
   /** Remembers the Vault folder so later sessions do not ask again. */

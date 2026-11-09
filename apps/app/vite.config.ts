@@ -26,7 +26,7 @@ const target = resolveTarget(process.env.VITE_TARGET);
  */
 function webAppHeadTags(): Plugin {
   return {
-    name: "taskmanager-web-app-head-tags",
+    name: "shungite-web-app-head-tags",
     transformIndexHtml() {
       return [
         {
@@ -73,7 +73,7 @@ function webAppHeadTags(): Plugin {
         },
         {
           tag: "meta",
-          attrs: { name: "apple-mobile-web-app-title", content: "TaskManager" },
+          attrs: { name: "apple-mobile-web-app-title", content: "Shungite" },
           injectTo: "head",
         },
       ];
@@ -93,8 +93,8 @@ if (target === "web") {
       includeAssets: ["pwa/apple-touch-icon-180x180.png"],
       manifest: {
         id: "/",
-        name: "TaskManager",
-        short_name: "TaskManager",
+        name: "Shungite",
+        short_name: "Shungite",
         description:
           "Todo list local-first: Tasks em Markdown com Sync opcional.",
         lang: "pt-BR",

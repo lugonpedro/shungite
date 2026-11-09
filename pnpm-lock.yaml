@@ -168,12 +168,12 @@ importers:
 
   apps/app:
     dependencies:
+      '@shungite/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@supabase/supabase-js':
         specifier: ^2.119.0
         version: 2.119.0
-      '@taskmanager/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4

@@ -88,7 +88,7 @@ export function Settings({
             ) : canChooseVault ? (
               <p className="settings__current">
                 Nenhum Vault escolhido ainda. Sugestão:{" "}
-                <code>~/Documents/TaskManager</code>
+                <code>~/Documents/Shungite</code>
               </p>
             ) : (
               <p className="settings__current">O Vault do app ainda não foi criado.</p>
@@ -102,7 +102,7 @@ export function Settings({
                     onClick={() => void run(onUseDefaultVault)}
                     type="button"
                   >
-                    Usar ~/Documents/TaskManager
+                    Usar ~/Documents/Shungite
                   </button>
                 )}
                 <button

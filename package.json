@@ -1,11 +1,11 @@
 {
-  "name": "taskmanager",
+  "name": "shungite",
   "private": true,
   "packageManager": "pnpm@12.16.1",
   "scripts": {
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
-    "app:dev": "pnpm --filter @taskmanager/app tauri dev",
-    "app:web": "VITE_TARGET=web pnpm --filter @taskmanager/app dev"
+    "app:dev": "pnpm --filter @shungite/app tauri dev",
+    "app:web": "VITE_TARGET=web pnpm --filter @shungite/app dev"
   }
 }

@@ -1,4 +1,4 @@
-# TaskManager
+# Shungite
 
 Todo list local-first inspirado no Obsidian: seus todos viram arquivos `.md` numa pasta do seu computador, com sync online entre Mac e iPhone.
 
@@ -47,7 +47,7 @@ Requer Rust instalado (via `rustup`) e disponível no `PATH`. A primeira compila
 ### App iOS (simulador)
 
 O iPhone é um **Satellite**: o Vault vive no sandbox do app
-(`Library/Application Support/com.lugonpedro.taskmanager/vault`, criado no
+(`Library/Application Support/com.lugonpedro.shungite/vault`, criado no
 primeiro launch) e é alimentado só pelo Sync. O dispositivo nunca vira Home.
 
 Pré-requisitos, além dos do app desktop:
@@ -64,26 +64,26 @@ preciso rodar `xcode-select -s`). O projeto Xcode nativo é gerado em
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  pnpm --filter @taskmanager/app tauri ios init
+  pnpm --filter @shungite/app tauri ios init
 ```
 
 Rodar em modo de desenvolvimento (abre o Vite, compila e instala no simulador):
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  pnpm --filter @taskmanager/app tauri ios dev "iPhone 17"
+  pnpm --filter @shungite/app tauri ios dev "iPhone 17"
 ```
 
 Ou gerar o bundle e instalar pelo `simctl`:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  pnpm --filter @taskmanager/app tauri ios build --debug -t aarch64-sim
+  pnpm --filter @shungite/app tauri ios build --debug -t aarch64-sim
 
 xcrun simctl boot "iPhone 17"
 xcrun simctl install "iPhone 17" \
-  apps/app/src-tauri/gen/apple/build/arm64-sim/TaskManager.app
-xcrun simctl launch "iPhone 17" com.lugonpedro.taskmanager
+  apps/app/src-tauri/gen/apple/build/arm64-sim/Shungite.app
+xcrun simctl launch "iPhone 17" com.lugonpedro.shungite
 xcrun simctl io "iPhone 17" screenshot shot.png
 ```
 

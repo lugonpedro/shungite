@@ -25,27 +25,27 @@ Este documento cobre o deploy; os passos de desenvolvimento local continuam no
 
 ```bash
 pnpm install
-pnpm --filter @taskmanager/app tauri build
+pnpm --filter @shungite/app tauri build
 ```
 
 Esse comando roda `pnpm build` (target `tauri`, sem o service worker) e depois
 compila o binário Rust. Saídas esperadas:
 
-- `apps/app/src-tauri/target/release/bundle/macos/TaskManager.app`
-- `apps/app/src-tauri/target/release/bundle/dmg/TaskManager_0.0.0_<arch>.dmg`
+- `apps/app/src-tauri/target/release/bundle/macos/Shungite.app`
+- `apps/app/src-tauri/target/release/bundle/dmg/Shungite_0.0.0_<arch>.dmg`
 
 Para gerar um binário universal (Apple Silicon + Intel):
 
 ```bash
 rustup target add x86_64-apple-darwin
-pnpm --filter @taskmanager/app tauri build --target universal-apple-darwin
+pnpm --filter @shungite/app tauri build --target universal-apple-darwin
 ```
 
 O build é **sem assinatura/notarização**. No primeiro launch o macOS bloqueia o
 app; abra com botão direito → **Abrir**, ou remova a quarentena:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/TaskManager.app
+xattr -dr com.apple.quarantine /Applications/Shungite.app
 ```
 
 ### Sync no app empacotado
@@ -161,7 +161,7 @@ Pontos de atenção:
   `VITE_TARGET=web` e roda `tsc -p tsconfig.web.json && vite build`.
 - Com Root Directory `apps/app`, a Vercel instala as dependências a partir da
   raiz do monorepo (há `pnpm-workspace.yaml` e `pnpm-lock.yaml` na raiz). Se o
-  install reclamar de `@taskmanager/core`, use Install Command
+  install reclamar de `@shungite/core`, use Install Command
   `cd ../.. && pnpm install --frozen-lockfile` e habilite a opção de incluir
   arquivos fora do Root Directory no build.
 - **Environment Variables** (Production e Preview), com os mesmos nomes do
@@ -184,14 +184,14 @@ rotas de cliente, aí sim vale um rewrite de SPA para `/index.html`.
 
 ```bash
 pnpm install
-pnpm --filter @taskmanager/app build:web
+pnpm --filter @shungite/app build:web
 ```
 
 Saída em `apps/app/dist/` (`sw.js`, `manifest.webmanifest` e `pwa/`). Para
 conferir o build servido:
 
 ```bash
-pnpm --filter @taskmanager/app exec vite preview
+pnpm --filter @shungite/app exec vite preview
 ```
 
 Para desenvolvimento web local (`http://localhost:1420`):
@@ -208,7 +208,7 @@ Faça com o Mac configurado como Home e logado na mesma conta do iPhone.
 
 - [ ] No iPhone, abra `https://<app>.vercel.app` no **Safari** (não Chrome).
 - [ ] Toque em **Compartilhar → Adicionar à Tela de Início** e confirme.
-- [ ] Abra o TaskManager pelo ícone da tela de início: deve abrir em tela cheia,
+- [ ] Abra o Shungite pelo ícone da tela de início: deve abrir em tela cheia,
       sem a barra do Safari.
 - [ ] Em Configurações → Conta, entre com o e-mail, pegue o código de 6 dígitos
       no app de e-mail e cole no PWA. O painel deve mostrar "Conectado como …".

@@ -1,10 +1,10 @@
 import {
   VaultRequiredError,
-  createTaskManager,
+  createShungite,
   type Task,
-  type TaskManager,
+  type Shungite,
   type UpdateTaskInput,
-} from "@taskmanager/core";
+} from "@shungite/core";
 import {
   useCallback,
   useEffect,
@@ -128,7 +128,7 @@ function Layout({
 }
 
 export function App() {
-  const [core, setCore] = useState<TaskManager | null>(null);
+  const [core, setCore] = useState<Shungite | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [vaultPath, setVaultPath] = useState<string | null>(null);
   const [suggestedVaultPath, setSuggestedVaultPath] = useState<string | null>(
@@ -170,7 +170,7 @@ export function App() {
         const client = supabase;
         if (client !== null && session !== null) {
           setCore(
-            createTaskManager({
+            createShungite({
               localStore,
               fileStore: platform.createFileStore(),
               remoteStore: createSupabaseRemoteStore(client),
@@ -179,7 +179,7 @@ export function App() {
           );
         } else {
           setCore(
-            createTaskManager({
+            createShungite({
               localStore,
               fileStore: platform.createFileStore(),
             }),
@@ -368,7 +368,7 @@ export function App() {
 }
 
 interface TodoProps {
-  core: TaskManager;
+  core: Shungite;
   notice: string | null;
   onVaultRequired: (taskId: string) => void;
   /** Called after a Promote or a Note rewrite, so the Vault tree refreshes. */

@@ -1,4 +1,4 @@
-# TaskManager
+# Shungite
 
 Um gerenciador de tarefas local-first inspirado no Obsidian: o usuário anota Tarefas rapidamente e pode transformar qualquer uma delas em um arquivo Markdown dentro de uma pasta sua, com sync entre dispositivos.
 

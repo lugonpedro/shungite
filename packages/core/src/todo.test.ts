@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createTaskManager } from "./index";
+import { createShungite } from "./index";
 import { createMemoryFileStore, createMemoryLocalStore } from "./test-support";
 
 function setup() {
   const localStore = createMemoryLocalStore();
   const fileStore = createMemoryFileStore();
-  const core = createTaskManager({ localStore, fileStore });
+  const core = createShungite({ localStore, fileStore });
   return { core, localStore, fileStore };
 }
 
@@ -126,11 +126,11 @@ describe("To-Do Tasks", () => {
   it("keeps a deleted Task deleted after the app is reopened", async () => {
     const localStore = createMemoryLocalStore();
     const fileStore = createMemoryFileStore();
-    const firstRun = createTaskManager({ localStore, fileStore });
+    const firstRun = createShungite({ localStore, fileStore });
     const task = await firstRun.createTask({ text: "Buy milk" });
     await firstRun.deleteTask(task.id);
 
-    const reopened = createTaskManager({ localStore, fileStore });
+    const reopened = createShungite({ localStore, fileStore });
 
     await expect(reopened.listTasks()).resolves.toEqual([]);
     await expect(reopened.getTask(task.id)).resolves.toBeNull();
@@ -139,14 +139,14 @@ describe("To-Do Tasks", () => {
   it("keeps Tasks after the app is closed and reopened", async () => {
     const localStore = createMemoryLocalStore();
     const fileStore = createMemoryFileStore();
-    const firstRun = createTaskManager({ localStore, fileStore });
+    const firstRun = createShungite({ localStore, fileStore });
     const task = await firstRun.createTask({
       text: "Persist me",
       due: "2026-08-01",
     });
     await firstRun.setTaskDone(task.id, true);
 
-    const reopened = createTaskManager({ localStore, fileStore });
+    const reopened = createShungite({ localStore, fileStore });
 
     await expect(reopened.listTasks()).resolves.toMatchObject([
       { id: task.id, text: "Persist me", due: "2026-08-01", done: true },

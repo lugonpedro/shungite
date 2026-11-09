@@ -1,8 +1,8 @@
-import { uuidv7, type DeviceInfo } from "@taskmanager/core";
+import { uuidv7, type DeviceInfo } from "@shungite/core";
 import { isIOS, platform } from "./platform";
 
-const DEVICE_ID_KEY = "taskmanager.device.id";
-const DEVICE_KIND_KEY = "taskmanager.device.kind";
+const DEVICE_ID_KEY = "shungite.device.id";
+const DEVICE_KIND_KEY = "shungite.device.kind";
 
 function deviceName(): string {
   const agent = navigator.userAgent;

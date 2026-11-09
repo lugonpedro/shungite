@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  createTaskManager,
+  createShungite,
   type VaultTree,
   type VaultTreeEntry,
   type VaultTreeFolder,
@@ -14,7 +14,7 @@ import {
 function setup() {
   const localStore = createLocalStore();
   const fileStore = createFileStore();
-  const core = createTaskManager({ localStore, fileStore });
+  const core = createShungite({ localStore, fileStore });
   return { core, localStore, fileStore };
 }
 
@@ -115,7 +115,7 @@ describe("listVaultTree", () => {
       reads.push(path);
       return readFile(path);
     };
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
     await fileStore.write(
       "/vault/Foreign.md",

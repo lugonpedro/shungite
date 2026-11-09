@@ -1,4 +1,4 @@
-import type { LocalStore } from "@taskmanager/core";
+import type { LocalStore } from "@shungite/core";
 import { createIndexedDBFileStore } from "../indexeddb-file-store";
 import { createIndexedDBLocalStore } from "../indexeddb-local-store";
 import { WEB_VAULT_PATH } from "../indexeddb";

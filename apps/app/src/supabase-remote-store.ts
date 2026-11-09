@@ -3,7 +3,7 @@ import type {
   RemoteNote,
   RemoteStore,
   RemoteTask,
-} from "@taskmanager/core";
+} from "@shungite/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface TaskRow {

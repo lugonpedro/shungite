@@ -6,7 +6,7 @@ let sequence = 0;
 
 function uniqueDatabase(prefix: string): string {
   sequence += 1;
-  return `taskmanager-${prefix}-${Date.now()}-${sequence}`;
+  return `shungite-${prefix}-${Date.now()}-${sequence}`;
 }
 
 describe("IndexedDB FileStore", () => {

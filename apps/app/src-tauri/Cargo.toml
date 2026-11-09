@@ -1,10 +1,10 @@
 [package]
-name = "taskmanager"
+name = "shungite"
 version = "0.0.0"
 edition = "2021"
 
 [lib]
-name = "taskmanager_lib"
+name = "shungite_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
