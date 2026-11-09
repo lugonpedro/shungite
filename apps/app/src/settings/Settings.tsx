@@ -12,6 +12,11 @@ interface SettingsProps {
    * so there is no folder to suggest or pick.
    */
   canChooseVault: boolean;
+  /**
+   * False on the web build: the PWA is always a Satellite and has no Vault
+   * folder, so Configurações shows only Conta e Sync (ADR 0002).
+   */
+  showVault: boolean;
   onUseDefaultVault: () => Promise<void>;
   onChooseVault: () => Promise<void>;
 }
@@ -31,6 +36,7 @@ export function Settings({
   notice,
   syncState,
   canChooseVault,
+  showVault,
   onUseDefaultVault,
   onChooseVault,
 }: SettingsProps) {
@@ -57,62 +63,66 @@ export function Settings({
         <h1>Configurações</h1>
       </header>
 
-      {notice !== null && (
+      {/* The only notice today is the "choose a Vault to Promote" prompt, which
+          does not apply to the web build (always a Satellite). */}
+      {showVault && notice !== null && (
         <p className="notice" role="status">
           {notice}
         </p>
       )}
 
       <div className="settings">
-        <section aria-labelledby="vault-heading" className="settings__section">
-          <h2 id="vault-heading">Vault</h2>
-          <p className="settings__hint">
-            {canChooseVault
-              ? "A pasta do seu computador onde as Notes .md ficam."
-              : "No iPhone o Vault fica dentro do app e é alimentado só pelo Sync."}
-          </p>
-
-          {vaultPath !== null ? (
-            <p className="settings__current">
-              Pasta atual: <code>{vaultPath}</code>
+        {showVault && (
+          <section aria-labelledby="vault-heading" className="settings__section">
+            <h2 id="vault-heading">Vault</h2>
+            <p className="settings__hint">
+              {canChooseVault
+                ? "A pasta do seu computador onde as Notes .md ficam."
+                : "No iPhone o Vault fica dentro do app e é alimentado só pelo Sync."}
             </p>
-          ) : canChooseVault ? (
-            <p className="settings__current">
-              Nenhum Vault escolhido ainda. Sugestão:{" "}
-              <code>~/Documents/TaskManager</code>
-            </p>
-          ) : (
-            <p className="settings__current">O Vault do app ainda não foi criado.</p>
-          )}
 
-          {canChooseVault && (
-            <div className="settings__actions">
-              {!alreadyDefault && (
+            {vaultPath !== null ? (
+              <p className="settings__current">
+                Pasta atual: <code>{vaultPath}</code>
+              </p>
+            ) : canChooseVault ? (
+              <p className="settings__current">
+                Nenhum Vault escolhido ainda. Sugestão:{" "}
+                <code>~/Documents/TaskManager</code>
+              </p>
+            ) : (
+              <p className="settings__current">O Vault do app ainda não foi criado.</p>
+            )}
+
+            {canChooseVault && (
+              <div className="settings__actions">
+                {!alreadyDefault && (
+                  <button
+                    disabled={busy || suggestedPath === null}
+                    onClick={() => void run(onUseDefaultVault)}
+                    type="button"
+                  >
+                    Usar ~/Documents/TaskManager
+                  </button>
+                )}
                 <button
-                  disabled={busy || suggestedPath === null}
-                  onClick={() => void run(onUseDefaultVault)}
+                  className="button--ghost"
+                  disabled={busy}
+                  onClick={() => void run(onChooseVault)}
                   type="button"
                 >
-                  Usar ~/Documents/TaskManager
+                  Escolher outra pasta…
                 </button>
-              )}
-              <button
-                className="button--ghost"
-                disabled={busy}
-                onClick={() => void run(onChooseVault)}
-                type="button"
-              >
-                Escolher outra pasta…
-              </button>
-            </div>
-          )}
+              </div>
+            )}
 
-          {error !== null && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-        </section>
+            {error !== null && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+          </section>
+        )}
 
         <section
           aria-labelledby="account-heading"

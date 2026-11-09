@@ -347,6 +347,7 @@ export function App() {
           notice={settingsNotice}
           onChooseVault={chooseVault}
           onUseDefaultVault={useDefaultVault}
+          showVault={platform.target === "tauri"}
           suggestedPath={suggestedVaultPath}
           syncState={syncState}
           vaultPath={vaultPath}

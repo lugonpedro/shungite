@@ -16,6 +16,7 @@ const VAULT_FOLDER = "vault";
 
 /** Tauri (desktop/mobile) platform: wraps the existing Tauri-backed implementations. */
 export const platform: Platform = {
+  target: "tauri",
   createLocalStore: createTauriLocalStore,
   createFileStore,
   watchVault,

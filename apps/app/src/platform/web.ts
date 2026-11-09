@@ -9,6 +9,7 @@ function notImplemented(): Promise<never> {
 
 /** Web platform stub; real IndexedDB adapters land in #29. */
 export const platform: Platform = {
+  target: "web",
   createLocalStore() {
     return notImplemented();
   },
