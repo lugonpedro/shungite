@@ -245,6 +245,12 @@ button:disabled {
   font-size: 12.5px;
 }
 
+.auth .auth__hint {
+  color: var(--muted);
+  flex-basis: 100%;
+  font-size: 12px;
+}
+
 .add-form {
   display: flex;
   gap: 8px;

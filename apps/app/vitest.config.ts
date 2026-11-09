@@ -1,9 +1,22 @@
+import react from "@vitejs/plugin-react";
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitest/config";
 
-// The IndexedDB adapters run in Node with `fake-indexeddb`; no DOM needed.
+// Component tests need a DOM (jsdom); the IndexedDB adapter tests load
+// `fake-indexeddb/auto` themselves and run fine in the same environment.
 export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      // Tests that need the real platform module can use the Tauri variant;
+      // login tests mock `../platform` to exercise the web build.
+      "@platform-impl": fileURLToPath(
+        new URL("./src/platform/tauri.ts", import.meta.url),
+      ),
+    },
+  },
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"],
+    environment: "jsdom",
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 });

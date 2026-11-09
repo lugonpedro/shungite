@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { platform } from "../platform";
 import { supabase } from "./supabaseClient";
 import { useSession } from "./useSession";
 
@@ -9,10 +10,17 @@ type Status =
   | { kind: "verifying"; email: string }
   | { kind: "error"; message: string };
 
+const isWeb = platform.target === "web";
+const WEB_CODE_PATTERN = /^\d{6}$/;
+
 /**
- * Magic-link sign-in and sign-out. Sync is optional: when Supabase is not
- * configured, or nobody is signed in, the rest of the app keeps working with
- * local data only.
+ * Sign-in and sign-out. Sync is optional: when Supabase is not configured, or
+ * nobody is signed in, the rest of the app keeps working with local data only.
+ *
+ * On the web build (the iOS PWA in ADR 0002) the primary flow is e-mail → the
+ * 6-digit code sent by Supabase → session, because on iOS the magic link opens
+ * in Safari, outside the installed PWA. The magic link stays available as a
+ * secondary option. The Tauri build keeps the magic-link-first flow.
  */
 export function AuthPanel() {
   const client = supabase;
@@ -46,7 +54,7 @@ export function AuthPanel() {
     );
   }
 
-  async function sendMagicLink(event: FormEvent<HTMLFormElement>) {
+  async function sendLoginEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return;
@@ -70,7 +78,7 @@ export function AuthPanel() {
     if (status.kind !== "sent") return;
 
     const token = code.trim();
-    if (!token) return;
+    if (token === "" || (isWeb && !WEB_CODE_PATTERN.test(token))) return;
 
     const { email: pendingEmail } = status;
     setStatus({ kind: "verifying", email: pendingEmail });
@@ -91,33 +99,55 @@ export function AuthPanel() {
 
   const sentEmail =
     status.kind === "sent" || status.kind === "verifying" ? status.email : null;
+  const verifying = status.kind === "verifying";
+  const codeIsValid = !isWeb || WEB_CODE_PATTERN.test(code.trim());
 
   return (
     <div className="auth">
       {sentEmail ? (
         <form onSubmit={(event) => void verifyCode(event)}>
-          <p>
-            Enviamos um link e um código para <strong>{sentEmail}</strong>. Abra o link no navegador ou
-            cole o código aqui.
-          </p>
+          {isWeb ? (
+            <p>
+              Enviamos um código de 6 dígitos para <strong>{sentEmail}</strong>.
+            </p>
+          ) : (
+            <p>
+              Enviamos um link e um código para <strong>{sentEmail}</strong>. Abra o link no navegador
+              ou cole o código aqui.
+            </p>
+          )}
           <label>
-            Código do e-mail
+            {isWeb ? "Código de 6 dígitos" : "Código do e-mail"}
             <input
-              inputMode="numeric"
               autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={isWeb ? 6 : undefined}
+              pattern="[0-9]*"
               value={code}
-              onChange={(event) => setCode(event.target.value)}
+              onChange={(event) =>
+                setCode(
+                  isWeb
+                    ? event.target.value.replace(/\D/g, "").slice(0, 6)
+                    : event.target.value,
+                )
+              }
             />
           </label>
-          <button type="submit" disabled={status.kind === "verifying"}>
-            {status.kind === "verifying" ? "Entrando…" : "Entrar"}
+          <button type="submit" disabled={verifying || !codeIsValid}>
+            {verifying ? "Entrando…" : "Entrar"}
           </button>
           <button type="button" onClick={() => setStatus({ kind: "idle" })}>
             Usar outro e-mail
           </button>
+          {isWeb && (
+            <p className="auth__hint">
+              O e-mail também traz um magic link, mas no iPhone ele abre no Safari, fora do PWA
+              instalado. Por isso, prefira digitar o código aqui.
+            </p>
+          )}
         </form>
       ) : (
-        <form onSubmit={(event) => void sendMagicLink(event)}>
+        <form onSubmit={(event) => void sendLoginEmail(event)}>
           <label>
             E-mail
             <input
@@ -129,9 +159,17 @@ export function AuthPanel() {
             />
           </label>
           <button type="submit" disabled={status.kind === "sending"}>
-            {status.kind === "sending" ? "Enviando…" : "Entrar com magic link"}
+            {status.kind === "sending"
+              ? "Enviando…"
+              : isWeb
+                ? "Enviar código"
+                : "Entrar com magic link"}
           </button>
-          <span>Sem conta? Continue sem entrar: tudo fica só neste dispositivo.</span>
+          <span>
+            {isWeb
+              ? "Vamos enviar um código de 6 dígitos. O e-mail também traz um magic link, que no iPhone abre no Safari."
+              : "Sem conta? Continue sem entrar: tudo fica só neste dispositivo."}
+          </span>
         </form>
       )}
 

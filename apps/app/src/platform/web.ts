@@ -11,6 +11,7 @@ import type { Platform } from "./types";
  * Sync flows work unchanged.
  */
 export const platform: Platform = {
+  target: "web",
   canChooseVault: false,
 
   async createLocalStore(): Promise<LocalStore> {
