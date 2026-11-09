@@ -1,0 +1,127 @@
+import { useState } from "react";
+import { AuthPanel } from "../auth/AuthPanel";
+import { syncLabel, type SyncState } from "../use-sync";
+
+interface SettingsProps {
+  vaultPath: string | null;
+  suggestedPath: string | null;
+  notice: string | null;
+  syncState: SyncState;
+  onUseDefaultVault: () => Promise<void>;
+  onChooseVault: () => Promise<void>;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Configurações concentrates the Vault (current folder and change) and Conta e
+ * Sync (magic-link sign-in, sign-out and Sync state). The AuthPanel lives here
+ * instead of over the Task list.
+ */
+export function Settings({
+  vaultPath,
+  suggestedPath,
+  notice,
+  syncState,
+  onUseDefaultVault,
+  onChooseVault,
+}: SettingsProps) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(action: () => Promise<void>): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const alreadyDefault = vaultPath !== null && vaultPath === suggestedPath;
+
+  return (
+    <>
+      <header className="app__header">
+        <h1>Configurações</h1>
+      </header>
+
+      {notice !== null && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
+
+      <div className="settings">
+        <section aria-labelledby="vault-heading" className="settings__section">
+          <h2 id="vault-heading">Vault</h2>
+          <p className="settings__hint">
+            A pasta do seu computador onde as Notes <code>.md</code> ficam.
+          </p>
+
+          {vaultPath !== null ? (
+            <p className="settings__current">
+              Pasta atual: <code>{vaultPath}</code>
+            </p>
+          ) : (
+            <p className="settings__current">
+              Nenhum Vault escolhido ainda. Sugestão:{" "}
+              <code>~/Documents/TaskManager</code>
+            </p>
+          )}
+
+          <div className="settings__actions">
+            {!alreadyDefault && (
+              <button
+                disabled={busy || suggestedPath === null}
+                onClick={() => void run(onUseDefaultVault)}
+                type="button"
+              >
+                Usar ~/Documents/TaskManager
+              </button>
+            )}
+            <button
+              className="button--ghost"
+              disabled={busy}
+              onClick={() => void run(onChooseVault)}
+              type="button"
+            >
+              Escolher outra pasta…
+            </button>
+          </div>
+
+          {error !== null && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+        </section>
+
+        <section
+          aria-labelledby="account-heading"
+          className="settings__section"
+        >
+          <h2 id="account-heading">Conta e Sync</h2>
+          <p className="settings__sync">
+            Estado do Sync:{" "}
+            <strong
+              className={
+                syncState === "on"
+                  ? "settings__sync-state settings__sync-state--on"
+                  : "settings__sync-state"
+              }
+            >
+              {syncLabel(syncState)}
+            </strong>
+          </p>
+          <AuthPanel />
+        </section>
+      </div>
+    </>
+  );
+}
