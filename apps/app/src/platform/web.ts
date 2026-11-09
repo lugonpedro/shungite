@@ -1,3 +1,4 @@
+import type { LocalStore } from "@taskmanager/core";
 import type { Platform } from "./types";
 
 const NOT_IMPLEMENTED = "não implementado";
@@ -25,5 +26,8 @@ export const platform: Platform = {
   },
   chooseVaultFolder() {
     return notImplemented();
+  },
+  async provisionIOSVault(_localStore: LocalStore): Promise<void> {
+    // No iOS sandbox Vault on the web build.
   },
 };

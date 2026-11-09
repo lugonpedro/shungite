@@ -8,4 +8,6 @@ export interface Platform {
   defaultVaultPath(): Promise<string>;
   ensureVaultFolder(path: string): Promise<void>;
   chooseVaultFolder(): Promise<string | null>;
+  /** Provisions the iOS sandbox Vault on first launch; no-op on desktop/web. */
+  provisionIOSVault(localStore: LocalStore): Promise<void>;
 }

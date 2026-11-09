@@ -1,9 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "sql:default",
@@ -11,6 +9,7 @@
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-exists",
+    "fs:allow-mkdir",
     "fs:allow-remove",
     "fs:allow-read-dir",
     "fs:allow-watch",
@@ -18,30 +17,16 @@
     {
       "identifier": "fs:scope",
       "allow": [
-        {
-          "path": "$HOME/**"
-        },
-        {
-          "path": "$DOCUMENT/**"
-        },
-        {
-          "path": "$DESKTOP/**"
-        },
-        {
-          "path": "$DOWNLOAD/**"
-        },
-        {
-          "path": "/Volumes/**"
-        },
-        {
-          "path": "/tmp/**"
-        },
-        {
-          "path": "/private/tmp/**"
-        }
+        { "path": "$HOME/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "/Volumes/**" },
+        { "path": "/tmp/**" },
+        { "path": "/private/tmp/**" }
       ]
     },
-    "fs:allow-mkdir",
     "dialog:allow-open"
   ]
 }
