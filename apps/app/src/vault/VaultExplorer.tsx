@@ -1,6 +1,6 @@
 import type { TaskManager, VaultTree, VaultTreeEntry } from "@taskmanager/core";
 import { useCallback, useEffect, useState } from "react";
-import { watchVault } from "../file-store";
+import { platform } from "../platform";
 import "./vault.css";
 
 function errorMessage(error: unknown): string {
@@ -64,7 +64,7 @@ export function VaultExplorer({
     let active = true;
     let stop: (() => void) | null = null;
 
-    watchVault(vaultPath, () => {
+    platform.watchVault(vaultPath, () => {
       void load();
     })
       .then((unwatch) => {

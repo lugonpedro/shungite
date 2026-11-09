@@ -17,21 +17,14 @@ import {
 import { supabase } from "./auth/supabaseClient";
 import { useSession } from "./auth/useSession";
 import { loadDeviceIdentity, setDeviceHome } from "./device";
-import { createFileStore } from "./file-store";
 import { ensureIOSVault } from "./ios-vault";
-import { isIOS } from "./platform";
+import { isIOS, platform } from "./platform";
 import { Settings } from "./settings/Settings";
 import { createSupabaseRemoteStore } from "./supabase-remote-store";
-import { createTauriLocalStore } from "./tauri-local-store";
 import { syncLabel, useSync, type SyncState } from "./use-sync";
 import { useVaultWatch } from "./use-vault-watch";
 import { NoteView } from "./vault/NoteView";
 import { VaultExplorer } from "./vault/VaultExplorer";
-import {
-  chooseVaultFolder,
-  defaultVaultPath,
-  ensureVaultFolder,
-} from "./vault-path";
 
 type Screen = "todo" | "note" | "settings";
 
@@ -152,7 +145,7 @@ export function App() {
   useEffect(() => {
     let active = true;
 
-    createTauriLocalStore()
+    platform.createLocalStore()
       .then(async (localStore) => {
         if (!active) {
           return;
@@ -179,7 +172,7 @@ export function App() {
           setCore(
             createTaskManager({
               localStore,
-              fileStore: createFileStore(),
+              fileStore: platform.createFileStore(),
               remoteStore: createSupabaseRemoteStore(client),
               device,
             }),
@@ -188,7 +181,7 @@ export function App() {
           setCore(
             createTaskManager({
               localStore,
-              fileStore: createFileStore(),
+              fileStore: platform.createFileStore(),
             }),
           );
         }
@@ -210,7 +203,7 @@ export function App() {
       return;
     }
     let active = true;
-    defaultVaultPath()
+    platform.defaultVaultPath()
       .then((path) => {
         if (active) {
           setSuggestedVaultPath(path);
@@ -294,12 +287,12 @@ export function App() {
     if (suggestedVaultPath === null) {
       throw new Error("Não foi possível descobrir a pasta padrão.");
     }
-    await ensureVaultFolder(suggestedVaultPath);
+    await platform.ensureVaultFolder(suggestedVaultPath);
     await applyVault(suggestedVaultPath);
   }, [applyVault, suggestedVaultPath]);
 
   const chooseVault = useCallback(async (): Promise<void> => {
-    const chosen = await chooseVaultFolder();
+    const chosen = await platform.chooseVaultFolder();
     if (chosen === null) {
       return;
     }

@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": { "@platform-impl": ["./src/platform/web.ts"] }
+  }
+}

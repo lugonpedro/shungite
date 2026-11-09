@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p . && vite build",
-    "typecheck": "tsc -p .",
+    "build": "tsc -p tsconfig.json && vite build",
+    "build:web": "tsc -p tsconfig.web.json && VITE_TARGET=web vite build",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.web.json",
     "tauri": "tauri"
   },
   "dependencies": {
