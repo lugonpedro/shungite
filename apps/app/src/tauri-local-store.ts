@@ -64,7 +64,21 @@ function toNote(row: NoteRow): NoteSyncState {
 }
 
 /** The app's SQLite `LocalStore`, backed by the official Tauri SQL plugin. */
-export async function createTauriLocalStore(): Promise<LocalStore> {
+let localStorePromise: Promise<LocalStore> | null = null;
+
+export function createTauriLocalStore(): Promise<LocalStore> {
+  // `Database.load` runs the Rust migrations; opening it twice concurrently
+  // (React StrictMode mounts effects twice in dev) can race on a fresh file.
+  // One shared connection per app run also keeps the SQLite lock calm.
+  localStorePromise ??= openStore().catch((error: unknown) => {
+    // Let a later mount retry after a transient failure.
+    localStorePromise = null;
+    throw error;
+  });
+  return localStorePromise;
+}
+
+async function openStore(): Promise<LocalStore> {
   const db = await Database.load(DATABASE_URL);
 
   return {

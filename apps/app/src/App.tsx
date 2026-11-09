@@ -1,4 +1,5 @@
 import {
+  VaultRequiredError,
   createTaskManager,
   type Task,
   type TaskManager,
@@ -13,17 +14,28 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { AuthPanel } from "./auth/AuthPanel";
 import { supabase } from "./auth/supabaseClient";
 import { useSession } from "./auth/useSession";
 import { loadDeviceIdentity, setDeviceHome } from "./device";
 import { createFileStore } from "./file-store";
 import { ensureIOSVault } from "./ios-vault";
 import { isIOS } from "./platform";
+import { Settings } from "./settings/Settings";
 import { createSupabaseRemoteStore } from "./supabase-remote-store";
 import { createTauriLocalStore } from "./tauri-local-store";
-import { useSync } from "./use-sync";
+import { syncLabel, useSync, type SyncState } from "./use-sync";
 import { useVaultWatch } from "./use-vault-watch";
+import { NoteView } from "./vault/NoteView";
+import { VaultExplorer } from "./vault/VaultExplorer";
+import {
+  chooseVaultFolder,
+  defaultVaultPath,
+  ensureVaultFolder,
+} from "./vault-path";
+
+type Screen = "todo" | "note" | "settings";
+
+const PROMOTE_NEEDS_VAULT_NOTICE = "Escolha o Vault para promover";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -37,32 +49,85 @@ function formatDue(due: string): string {
   return `${day}/${month}/${year}`;
 }
 
+function isVaultRequired(error: unknown): boolean {
+  return (
+    error instanceof VaultRequiredError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "vault-required")
+  );
+}
+
 interface LayoutProps {
-  syncOn: boolean;
+  screen: Screen;
+  syncState: SyncState;
+  onNavigate: (screen: Screen) => void;
+  /** The Vault tree, shown under the To-Do item. */
+  vaultExplorer?: ReactNode;
   children: ReactNode;
 }
 
 /**
- * The app's two areas: a narrow sidebar with the To-Do item and the Sync
- * indicator at the bottom, and the main area with the current screen.
+ * The app's two areas: a narrow sidebar with the To-Do item, the Vault tree
+ * and the Sync indicator at the bottom, and the main area with the current
+ * screen. The sidebar footer shows the real Sync state and opens Configurações.
  */
-function Layout({ syncOn, children }: LayoutProps) {
+function Layout({
+  screen,
+  syncState,
+  onNavigate,
+  vaultExplorer,
+  children,
+}: LayoutProps) {
+  const syncModifier =
+    syncState === "on"
+      ? " sync-status--on"
+      : syncState === "error"
+        ? " sync-status--error"
+        : syncState === "syncing"
+          ? " sync-status--syncing"
+          : "";
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <nav aria-label="Navegação" className="sidebar__nav">
-          <span aria-current="page" className="sidebar__item sidebar__item--active">
-            To-Do
-          </span>
-        </nav>
-        <footer className="sidebar__footer">
-          <span
-            className={syncOn ? "sync-status sync-status--on" : "sync-status"}
+          <button
+            aria-current={screen === "todo" ? "page" : undefined}
+            className={
+              screen === "todo"
+                ? "sidebar__item sidebar__item--active"
+                : "sidebar__item"
+            }
+            onClick={() => onNavigate("todo")}
+            type="button"
           >
+            To-Do
+          </button>
+        </nav>
+        {vaultExplorer}
+        <button
+          aria-current={screen === "settings" ? "page" : undefined}
+          className={
+            screen === "settings"
+              ? "sidebar__footer sidebar__footer--active"
+              : "sidebar__footer"
+          }
+          onClick={() => onNavigate("settings")}
+          type="button"
+        >
+          <span className={`sync-status${syncModifier}`}>
             <span aria-hidden="true" className="sync-status__dot" />
-            {syncOn ? "sincronizado" : "Sync desligado"}
+            {syncLabel(syncState)}
           </span>
-        </footer>
+          <span className="sidebar__settings">
+            <span aria-hidden="true" className="sidebar__settings-icon">
+              ⚙
+            </span>
+            Configurações
+          </span>
+        </button>
       </aside>
       <main className="app">{children}</main>
     </div>
@@ -72,6 +137,16 @@ function Layout({ syncOn, children }: LayoutProps) {
 export function App() {
   const [core, setCore] = useState<TaskManager | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
+  const [vaultPath, setVaultPath] = useState<string | null>(null);
+  const [suggestedVaultPath, setSuggestedVaultPath] = useState<string | null>(
+    null,
+  );
+  const [screen, setScreen] = useState<Screen>("todo");
+  const [notePath, setNotePath] = useState<string | null>(null);
+  const [vaultRevision, setVaultRevision] = useState(0);
+  const [pendingPromoteId, setPendingPromoteId] = useState<string | null>(null);
+  const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
+  const [todoNotice, setTodoNotice] = useState<string | null>(null);
   const { session } = useSession();
 
   useEffect(() => {
@@ -89,10 +164,15 @@ export function App() {
         // The device where a Vault was chosen is the Home; it stays Home.
         // iOS is always a Satellite, even though its sandbox Vault exists.
         const device = loadDeviceIdentity();
-        if (!isIOS() && (await localStore.getVaultPath()) !== null) {
+        const storedVaultPath = await localStore.getVaultPath();
+        if (!isIOS() && storedVaultPath !== null) {
           setDeviceHome();
           device.kind = "home";
         }
+        if (!active) {
+          return;
+        }
+        setVaultPath(storedVaultPath);
 
         const client = supabase;
         if (client !== null && session !== null) {
@@ -124,12 +204,128 @@ export function App() {
     };
   }, [session]);
 
+  useEffect(() => {
+    // iOS always uses the sandbox Vault fed by Sync: never suggest a folder.
+    if (isIOS()) {
+      return;
+    }
+    let active = true;
+    defaultVaultPath()
+      .then((path) => {
+        if (active) {
+          setSuggestedVaultPath(path);
+        }
+      })
+      .catch(() => {
+        // Without the path API (e.g. plain web dev) the suggestion is disabled.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const signedIn = supabase !== null && session !== null;
-  useSync(core, signedIn);
+  const syncState = useSync(core, signedIn);
+
+  // The success notice is a short confirmation, not a permanent status.
+  useEffect(() => {
+    if (todoNotice === null) {
+      return;
+    }
+    const timeout = setTimeout(() => setTodoNotice(null), 6_000);
+    return () => clearTimeout(timeout);
+  }, [todoNotice]);
+
+  const navigate = useCallback((next: Screen) => {
+    setScreen(next);
+    if (next !== "note") {
+      setNotePath(null);
+    }
+    if (next === "todo") {
+      setPendingPromoteId(null);
+      setSettingsNotice(null);
+    }
+  }, []);
+
+  /** Opens a managed Note in the read-only view. */
+  const openNote = useCallback((path: string) => {
+    setNotePath(path);
+    setScreen("note");
+  }, []);
+
+  /** Asks the Vault tree to reload after the app itself changed the Vault. */
+  const bumpVault = useCallback(() => {
+    setVaultRevision((current) => current + 1);
+  }, []);
+
+  const requestVaultForPromote = useCallback((taskId: string) => {
+    setPendingPromoteId(taskId);
+    setSettingsNotice(PROMOTE_NEEDS_VAULT_NOTICE);
+    setTodoNotice(null);
+    setScreen("settings");
+  }, []);
+
+  /** Remembers a Vault and, when a Promote is pending, runs it right away. */
+  const applyVault = useCallback(
+    async (path: string): Promise<void> => {
+      if (core === null) {
+        throw new Error("O app ainda está carregando.");
+      }
+      await core.setVaultPath(path);
+      setDeviceHome();
+      setVaultPath(path);
+      setSettingsNotice(null);
+      bumpVault();
+
+      const pending = pendingPromoteId;
+      setPendingPromoteId(null);
+      if (pending !== null) {
+        await core.promoteTask(pending);
+        await core.sync().catch(() => {});
+        setTodoNotice("Task promovida para o Vault.");
+        setScreen("todo");
+        bumpVault();
+      }
+    },
+    [bumpVault, core, pendingPromoteId],
+  );
+
+  const useDefaultVault = useCallback(async (): Promise<void> => {
+    if (suggestedVaultPath === null) {
+      throw new Error("Não foi possível descobrir a pasta padrão.");
+    }
+    await ensureVaultFolder(suggestedVaultPath);
+    await applyVault(suggestedVaultPath);
+  }, [applyVault, suggestedVaultPath]);
+
+  const chooseVault = useCallback(async (): Promise<void> => {
+    const chosen = await chooseVaultFolder();
+    if (chosen === null) {
+      return;
+    }
+    await applyVault(chosen);
+  }, [applyVault]);
+
+  const vaultExplorer =
+    core === null ? undefined : (
+      <VaultExplorer
+        core={core}
+        onOpenNote={openNote}
+        onOpenSettings={() => navigate("settings")}
+        revision={vaultRevision}
+        selectedPath={notePath}
+        vaultPath={vaultPath}
+      />
+    );
 
   if (startupError !== null) {
     return (
-      <Layout syncOn={signedIn}>
+      <Layout
+        onNavigate={navigate}
+        screen={screen}
+        syncState={syncState}
+        vaultExplorer={vaultExplorer}
+      >
         <p className="error" role="alert">
           Não foi possível abrir o banco local: {startupError}
         </p>
@@ -139,20 +335,52 @@ export function App() {
 
   if (core === null) {
     return (
-      <Layout syncOn={signedIn}>
+      <Layout onNavigate={navigate} screen={screen} syncState={syncState}>
         <p className="muted">Carregando…</p>
       </Layout>
     );
   }
 
   return (
-    <Layout syncOn={signedIn}>
-      <Todo core={core} />
+    <Layout
+      onNavigate={navigate}
+      screen={screen}
+      syncState={syncState}
+      vaultExplorer={vaultExplorer}
+    >
+      {screen === "settings" ? (
+        <Settings
+          canChooseVault={!isIOS()}
+          notice={settingsNotice}
+          onChooseVault={chooseVault}
+          onUseDefaultVault={useDefaultVault}
+          suggestedPath={suggestedVaultPath}
+          syncState={syncState}
+          vaultPath={vaultPath}
+        />
+      ) : screen === "note" && notePath !== null ? (
+        <NoteView core={core} path={notePath} revision={vaultRevision} />
+      ) : (
+        <Todo
+          core={core}
+          notice={todoNotice}
+          onVaultChanged={bumpVault}
+          onVaultRequired={requestVaultForPromote}
+        />
+      )}
     </Layout>
   );
 }
 
-function Todo({ core }: { core: TaskManager }) {
+interface TodoProps {
+  core: TaskManager;
+  notice: string | null;
+  onVaultRequired: (taskId: string) => void;
+  /** Called after a Promote or a Note rewrite, so the Vault tree refreshes. */
+  onVaultChanged: () => void;
+}
+
+function Todo({ core, notice, onVaultRequired, onVaultChanged }: TodoProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -217,6 +445,7 @@ function Todo({ core }: { core: TaskManager }) {
         await refresh();
         // Push the change to Sync right away (a no-op when signed out).
         await core.sync().catch(() => {});
+        onVaultChanged();
         setError(null);
         return true;
       } catch (cause) {
@@ -224,7 +453,7 @@ function Todo({ core }: { core: TaskManager }) {
         return false;
       }
     },
-    [core, refresh],
+    [core, onVaultChanged, refresh],
   );
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
@@ -256,7 +485,22 @@ function Todo({ core }: { core: TaskManager }) {
 
   const deleteTask = (id: string) => run(() => core.deleteTask(id));
 
-  const promoteTask = (id: string) => run(() => core.promoteTask(id));
+  /** Promote through the core; a missing Vault sends the user to Configurações. */
+  async function promoteTask(id: string): Promise<void> {
+    try {
+      await core.promoteTask(id);
+      await refresh();
+      await core.sync().catch(() => {});
+      onVaultChanged();
+      setError(null);
+    } catch (cause) {
+      if (isVaultRequired(cause)) {
+        onVaultRequired(id);
+        return;
+      }
+      setError(errorMessage(cause));
+    }
+  }
 
   const open = tasks.filter((task) => !task.done).length;
   const done = tasks.length - open;
@@ -272,7 +516,11 @@ function Todo({ core }: { core: TaskManager }) {
         )}
       </header>
 
-      <AuthPanel />
+      {notice !== null && (
+        <p className="notice notice--success" role="status">
+          {notice}
+        </p>
+      )}
 
       <form className="add-form" onSubmit={addTask}>
         <input
@@ -329,7 +577,7 @@ interface TaskItemProps {
   onToggle: (id: string, done: boolean) => Promise<boolean>;
   onUpdate: (id: string, changes: UpdateTaskInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
-  onPromote: (id: string) => Promise<boolean>;
+  onPromote: (id: string) => Promise<void>;
 }
 
 function TaskItem({
@@ -427,41 +675,153 @@ function TaskItem({
           conflito
         </span>
       )}
+      {task.notePath !== null && (
+        <span
+          aria-label="Já promovida para o Vault"
+          className="task__note-icon"
+          role="img"
+          title={task.notePath}
+        >
+          <FileIcon />
+        </span>
+      )}
       {task.due !== null && (
         <time className="task__due" dateTime={task.due}>
           {formatDue(task.due)}
         </time>
       )}
-      {task.notePath === null ? (
-        <button
-          aria-label={`Promover ${task.text} para Note`}
-          className="button--ghost task__action"
-          onClick={() => void onPromote(task.id)}
-          type="button"
-        >
-          Promover
-        </button>
-      ) : (
-        <span className="task__note" title="Já promovida: Note no Vault">
-          .md
-        </span>
-      )}
-      <button
-        aria-label={`Editar ${task.text}`}
-        className="button--ghost task__action"
-        onClick={startEditing}
-        type="button"
-      >
-        Editar
-      </button>
-      <button
-        aria-label={`Apagar ${task.text}`}
-        className="button--danger task__action"
-        onClick={() => void onDelete(task.id)}
-        type="button"
-      >
-        Apagar
-      </button>
+      <TaskMenu
+        onDelete={() => void onDelete(task.id)}
+        onEdit={startEditing}
+        onPromote={() => void onPromote(task.id)}
+        promoted={task.notePath !== null}
+        taskText={task.text}
+      />
     </li>
+  );
+}
+
+interface TaskMenuProps {
+  taskText: string;
+  promoted: boolean;
+  onEdit: () => void;
+  onPromote: () => void;
+  onDelete: () => void;
+}
+
+/**
+ * The "⋯" menu, visible on hover, that holds Editar, Promote and Apagar. A
+ * Task that already has a Note does not offer Promote again.
+ */
+function TaskMenu({
+  taskText,
+  promoted,
+  onEdit,
+  onPromote,
+  onDelete,
+}: TaskMenuProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function onPointerDown(event: PointerEvent) {
+      if (
+        rootRef.current !== null &&
+        !rootRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="task__menu" ref={rootRef}>
+      <button
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Ações de ${taskText}`}
+        className="task__menu-button"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        ⋯
+      </button>
+      {open && (
+        <div className="task__menu-list" role="menu">
+          <button
+            className="task__menu-item"
+            onClick={() => {
+              setOpen(false);
+              onEdit();
+            }}
+            role="menuitem"
+            type="button"
+          >
+            Editar
+          </button>
+          {!promoted && (
+            <button
+              className="task__menu-item"
+              onClick={() => {
+                setOpen(false);
+                onPromote();
+              }}
+              role="menuitem"
+              type="button"
+            >
+              Promote
+            </button>
+          )}
+          <button
+            className="task__menu-item task__menu-item--danger"
+            onClick={() => {
+              setOpen(false);
+              onDelete();
+            }}
+            role="menuitem"
+            type="button"
+          >
+            Apagar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="task__note-icon-svg"
+      fill="none"
+      height="14"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.5"
+      viewBox="0 0 24 24"
+      width="14"
+    >
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
   );
 }

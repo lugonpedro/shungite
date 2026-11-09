@@ -13,6 +13,11 @@ import { recordNoteChange } from "./note-sync";
 import { createSyncEngine } from "./sync";
 import { uuidv7 } from "./uuid";
 import { reconcileVault } from "./vault-watch";
+import {
+  buildVaultTree,
+  managedNotePaths,
+  readManagedNote,
+} from "./vault-tree";
 
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -304,6 +309,33 @@ export function createTaskManager(deps: TaskManagerDeps): TaskManager {
 
     async reconcileVault() {
       return reconcileVault({ localStore, fileStore, now });
+    },
+
+    async listVaultTree() {
+      const vaultPath = await localStore.getVaultPath();
+      if (vaultPath === null) {
+        return null;
+      }
+      const root = vaultPath.replace(/\/+$/, "");
+      const notes = await localStore.getNotes();
+      return buildVaultTree(
+        root,
+        await fileStore.list(root),
+        managedNotePaths(root, notes),
+      );
+    },
+
+    async readNote(path) {
+      const vaultPath = await localStore.getVaultPath();
+      if (vaultPath === null) {
+        return null;
+      }
+      return readManagedNote(
+        vaultPath.replace(/\/+$/, ""),
+        await localStore.getNotes(),
+        fileStore,
+        path,
+      );
     },
   };
 }
