@@ -1,8 +1,8 @@
-import type { LocalStore, NoteSyncState, Task } from "@taskmanager/core";
+import type { LocalStore, NoteSyncState, Task } from "@shungite/core";
 import Database from "@tauri-apps/plugin-sql";
 
 /** Relative to Tauri's app data directory. */
-const DATABASE_URL = "sqlite:taskmanager.db";
+const DATABASE_URL = "sqlite:shungite.db";
 const VAULT_PATH_KEY = "vault_path";
 
 const TASK_COLUMNS =

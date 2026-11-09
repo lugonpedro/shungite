@@ -41,9 +41,9 @@ describe("Settings no build web", () => {
         onChooseVault={noop}
         onUseDefaultVault={noop}
         showVault
-        suggestedPath="/Users/pessoa/Documents/TaskManager"
+        suggestedPath="/Users/pessoa/Documents/Shungite"
         syncState="on"
-        vaultPath="/Users/pessoa/Documents/TaskManager"
+        vaultPath="/Users/pessoa/Documents/Shungite"
       />,
     );
 

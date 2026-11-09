@@ -4,7 +4,7 @@ import { mkdir } from "@tauri-apps/plugin-fs";
 
 /** The Vault the app suggests when the user has not chosen one yet. */
 export async function defaultVaultPath(): Promise<string> {
-  return join(await homeDir(), "Documents", "TaskManager");
+  return join(await homeDir(), "Documents", "Shungite");
 }
 
 /** Creates the Vault folder on disk if it does not exist yet. */

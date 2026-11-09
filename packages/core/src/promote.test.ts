@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskManager } from "./index";
+import { createShungite } from "./index";
 import {
   createMemoryFileStore as createFileStore,
   createMemoryLocalStore as createLocalStore,
@@ -9,7 +9,7 @@ describe("promote", () => {
   it("creates a Note named after the Task with id, done and due in the frontmatter", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({
@@ -30,7 +30,7 @@ describe("promote", () => {
   it("writes an empty due when the Task has no due date", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: "Buy milk" });
@@ -44,7 +44,7 @@ describe("promote", () => {
   it("rewrites the Note frontmatter when the Task is completed and keeps the free text", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: "Write report", due: "2026-06-15" });
@@ -73,7 +73,7 @@ describe("promote", () => {
   it("renames the Note and keeps its body when the Task text changes", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: "Old title", due: "2026-06-15" });
@@ -95,7 +95,7 @@ describe("promote", () => {
   it("rewrites the Note frontmatter when the due date changes, keeping the body", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: "Old title", due: "2026-06-15" });
@@ -121,7 +121,7 @@ describe("promote", () => {
   it("uses a valid file name when the title has characters a folder cannot hold", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: 'R&D: notes/ideas "' });
@@ -134,7 +134,7 @@ describe("promote", () => {
   it("keeps a very long title inside a valid file name length", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: "á".repeat(500) });
@@ -148,7 +148,7 @@ describe("promote", () => {
   it("rewrites the same Note on a second Promote and keeps its body", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const task = await core.createTask({ text: "Write report" });
@@ -169,7 +169,7 @@ describe("promote", () => {
   it("does not overwrite another Task's Note when two titles collide", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
     await core.setVaultPath("/vault");
 
     const first = await core.createTask({ text: "Same title" });
@@ -191,7 +191,7 @@ describe("promote", () => {
   it("gives every Task a UUID v7", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
 
     const task = await core.createTask({ text: "Buy milk" });
 
@@ -205,7 +205,7 @@ describe("vault", () => {
   it("asks for the vault before the first Promote and remembers the choice", async () => {
     const localStore = createLocalStore();
     const fileStore = createFileStore();
-    const core = createTaskManager({ localStore, fileStore });
+    const core = createShungite({ localStore, fileStore });
 
     await expect(core.getVaultPath()).resolves.toBeNull();
 
@@ -218,7 +218,7 @@ describe("vault", () => {
 
     await expect(core.getVaultPath()).resolves.toBe("/vault");
 
-    const reopened = createTaskManager({ localStore, fileStore });
+    const reopened = createShungite({ localStore, fileStore });
     await expect(reopened.getVaultPath()).resolves.toBe("/vault");
   });
 });

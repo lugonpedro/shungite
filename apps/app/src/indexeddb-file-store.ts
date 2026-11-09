@@ -1,4 +1,4 @@
-import type { FileStore } from "@taskmanager/core";
+import type { FileStore } from "@shungite/core";
 import {
   DEFAULT_DATABASE_NAME,
   FILES_STORE,

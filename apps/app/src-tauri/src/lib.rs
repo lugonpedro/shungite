@@ -1,6 +1,6 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
-const DATABASE_URL: &str = "sqlite:taskmanager.db";
+const DATABASE_URL: &str = "sqlite:shungite.db";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

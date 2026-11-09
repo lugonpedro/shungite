@@ -1,4 +1,4 @@
-import type { TaskManager, VaultNote } from "@taskmanager/core";
+import type { Shungite, VaultNote } from "@shungite/core";
 import { useEffect, useState } from "react";
 import { Markdown } from "./markdown";
 
@@ -15,7 +15,7 @@ function formatDue(due: string): string {
 }
 
 interface NoteViewProps {
-  core: TaskManager;
+  core: Shungite;
   path: string;
   /** Bumped when the Vault changes on disk, so the Note is re-read. */
   revision: number;

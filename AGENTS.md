@@ -1,4 +1,4 @@
-# TaskManager
+# Shungite
 
 Todo list local-first: todos viram arquivos `.md` numa pasta local, com sync via Supabase. Ver `README.md`.
 
@@ -6,7 +6,7 @@ Todo list local-first: todos viram arquivos `.md` numa pasta local, com sync via
 
 ### Issue tracker
 
-Issues e specs vivem no GitHub Issues de `lugonpedro/taskmanager` (CLI `gh`). See `docs/agents/issue-tracker.md`.
+Issues e specs vivem no GitHub Issues de `lugonpedro/shungite` (CLI `gh`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

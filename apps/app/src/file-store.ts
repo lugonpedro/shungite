@@ -1,4 +1,4 @@
-import type { FileStore } from "@taskmanager/core";
+import type { FileStore } from "@shungite/core";
 import {
   exists as fsExists,
   readDir,
@@ -35,7 +35,7 @@ async function listMarkdownFiles(dir: string): Promise<string[]> {
 
 /**
  * A real `FileStore` over the Vault, backed by the Tauri fs plugin. It is the
- * adapter the app passes to `createTaskManager` so Notes read and write real
+ * adapter the app passes to `createShungite` so Notes read and write real
  * `.md` files.
  */
 export function createFileStore(): FileStore {

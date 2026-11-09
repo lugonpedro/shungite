@@ -5,7 +5,7 @@
  * build uses.
  */
 
-export const DEFAULT_DATABASE_NAME = "taskmanager";
+export const DEFAULT_DATABASE_NAME = "shungite";
 export const DATABASE_VERSION = 1;
 
 export const TASKS_STORE = "tasks";
@@ -32,11 +32,11 @@ export type StoreName = keyof typeof STORE_KEYS;
 export const WEB_VAULT_PATH = "/vault";
 
 export interface IndexedDBOptions {
-  /** Defaults to `taskmanager`; tests open isolated databases instead. */
+  /** Defaults to `shungite`; tests open isolated databases instead. */
   databaseName?: string;
 }
 
-export function openTaskManagerDatabase(name: string): Promise<IDBDatabase> {
+export function openShungiteDatabase(name: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, DATABASE_VERSION);
 
@@ -65,7 +65,7 @@ export function openTaskManagerDatabase(name: string): Promise<IDBDatabase> {
 export function createConnection(name: string): () => Promise<IDBDatabase> {
   let connection: Promise<IDBDatabase> | null = null;
   return () => {
-    connection ??= openTaskManagerDatabase(name).catch((error: unknown) => {
+    connection ??= openShungiteDatabase(name).catch((error: unknown) => {
       // Let a later call retry after a transient failure.
       connection = null;
       throw error;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskManager } from "./index";
+import { createShungite } from "./index";
 import { parseNote } from "./note";
 import {
   createMemoryFileStore as createFileStore,
@@ -9,7 +9,7 @@ import {
 function setup() {
   const localStore = createLocalStore();
   const fileStore = createFileStore();
-  const core = createTaskManager({ localStore, fileStore });
+  const core = createShungite({ localStore, fileStore });
   return { core, localStore, fileStore };
 }
 
@@ -19,12 +19,12 @@ const CLOCK = new Date("2026-11-08T10:00:00.000Z");
 function withClock() {
   const localStore = createLocalStore();
   const fileStore = createFileStore();
-  const core = createTaskManager({ localStore, fileStore, now: () => CLOCK });
+  const core = createShungite({ localStore, fileStore, now: () => CLOCK });
   return { core, localStore, fileStore };
 }
 
 async function promote(
-  core: ReturnType<typeof createTaskManager>,
+  core: ReturnType<typeof createShungite>,
   text: string,
   due: string | null = null,
 ) {

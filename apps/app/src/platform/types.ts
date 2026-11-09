@@ -1,4 +1,4 @@
-import type { FileStore, LocalStore } from "@taskmanager/core";
+import type { FileStore, LocalStore } from "@shungite/core";
 
 /** Platform capabilities the app uses; implemented per target (Tauri/web). */
 export interface Platform {

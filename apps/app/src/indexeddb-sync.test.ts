@@ -1,13 +1,13 @@
 import "fake-indexeddb/auto";
 import {
-  createTaskManager,
+  createShungite,
   type DeviceInfo,
   type RemoteDevice,
   type RemoteNote,
   type RemoteStore,
   type RemoteTask,
-  type TaskManager,
-} from "@taskmanager/core";
+  type Shungite,
+} from "@shungite/core";
 import { describe, expect, it } from "vitest";
 import { createIndexedDBFileStore } from "./indexeddb-file-store";
 import { createIndexedDBLocalStore } from "./indexeddb-local-store";
@@ -25,7 +25,7 @@ let sequence = 0;
 
 function uniqueDatabase(prefix: string): string {
   sequence += 1;
-  return `taskmanager-${prefix}-${Date.now()}-${sequence}`;
+  return `shungite-${prefix}-${Date.now()}-${sequence}`;
 }
 
 /** In-memory stand-in for the Supabase-backed RemoteStore. */
@@ -57,8 +57,8 @@ function createMemoryRemoteStore(): RemoteStore {
 }
 
 interface Setup {
-  home: TaskManager;
-  satellite: TaskManager;
+  home: Shungite;
+  satellite: Shungite;
   homeDb: string;
   satelliteDb: string;
 }
@@ -68,7 +68,7 @@ function setup(): Setup {
   const homeDb = uniqueDatabase("sync-home");
   const satelliteDb = uniqueDatabase("sync-satellite");
 
-  const home = createTaskManager({
+  const home = createShungite({
     localStore: createIndexedDBLocalStore({
       databaseName: homeDb,
       vaultPath: VAULT,
@@ -78,7 +78,7 @@ function setup(): Setup {
     device: HOME,
   });
 
-  const satellite = createTaskManager({
+  const satellite = createShungite({
     localStore: createIndexedDBLocalStore({
       databaseName: satelliteDb,
       vaultPath: VAULT,
@@ -92,7 +92,7 @@ function setup(): Setup {
 }
 
 /** A full round of Home and Satellite syncs, enough to reach a fixed point. */
-async function syncBoth(home: TaskManager, satellite: TaskManager) {
+async function syncBoth(home: Shungite, satellite: Shungite) {
   await home.sync();
   await satellite.sync();
   await home.sync();

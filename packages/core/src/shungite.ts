@@ -4,8 +4,8 @@ import {
   VaultRequiredError,
   type CreateTaskInput,
   type Task,
-  type TaskManager,
-  type TaskManagerDeps,
+  type Shungite,
+  type ShungiteDeps,
   type UpdateTaskInput,
 } from "./types";
 import { formatNote, joinPath, noteFileName, parseNote, relativePath } from "./note";
@@ -40,7 +40,7 @@ function normalizeVaultPath(path: string): string {
   return trimmed;
 }
 
-export function createTaskManager(deps: TaskManagerDeps): TaskManager {
+export function createShungite(deps: ShungiteDeps): Shungite {
   const { localStore, fileStore } = deps;
   const now = deps.now ?? (() => new Date());
   const newId =

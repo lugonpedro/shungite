@@ -1,4 +1,4 @@
-import type { TaskManager, VaultTree, VaultTreeEntry } from "@taskmanager/core";
+import type { Shungite, VaultTree, VaultTreeEntry } from "@shungite/core";
 import { useCallback, useEffect, useState } from "react";
 import { platform } from "../platform";
 import "./vault.css";
@@ -8,7 +8,7 @@ function errorMessage(error: unknown): string {
 }
 
 interface VaultExplorerProps {
-  core: TaskManager;
+  core: Shungite;
   vaultPath: string | null;
   /** Bumped after the app itself changes the Vault (e.g. a Promote). */
   revision: number;

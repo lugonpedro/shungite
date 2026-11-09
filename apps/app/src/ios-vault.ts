@@ -1,4 +1,4 @@
-import type { LocalStore } from "@taskmanager/core";
+import type { LocalStore } from "@shungite/core";
 import { platform } from "./platform";
 
 /**

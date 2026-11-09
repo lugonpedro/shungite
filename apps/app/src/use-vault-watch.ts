@@ -1,4 +1,4 @@
-import type { TaskManager } from "@taskmanager/core";
+import type { Shungite } from "@shungite/core";
 import { useEffect } from "react";
 import { platform } from "./platform";
 
@@ -7,7 +7,7 @@ import { platform } from "./platform";
  * file under the Vault changes. Best-effort: if watching is unavailable the app
  * keeps working, it just does not pick up external edits live.
  */
-export function useVaultWatch(core: TaskManager, onReconcile: () => void): void {
+export function useVaultWatch(core: Shungite, onReconcile: () => void): void {
   useEffect(() => {
     let active = true;
     let unwatch: (() => void) | null = null;

@@ -1,4 +1,4 @@
-import type { LocalStore, NoteSyncState, Task } from "@taskmanager/core";
+import type { LocalStore, NoteSyncState, Task } from "@shungite/core";
 import {
   DEFAULT_DATABASE_NAME,
   NOTES_STORE,

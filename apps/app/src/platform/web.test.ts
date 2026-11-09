@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import type { Task } from "@taskmanager/core";
+import type { Task } from "@shungite/core";
 import { describe, expect, it } from "vitest";
 import { platform } from "./web";
 

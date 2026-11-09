@@ -7,5 +7,5 @@ export function initialTab(): Tab {
 
 export * from "./types";
 export * from "./remote-store";
-export { createTaskManager } from "./task-manager";
+export { createShungite } from "./shungite";
 export { uuidv7 } from "./uuid";

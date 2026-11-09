@@ -1,5 +1,5 @@
 {
-  "name": "@taskmanager/app",
+  "name": "@shungite/app",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
-    "@taskmanager/core": "workspace:*",
+    "@shungite/core": "workspace:*",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-fs": "^2.7.1",

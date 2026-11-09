@@ -1,6 +1,6 @@
 import { appDataDir, join } from "@tauri-apps/api/path";
 import { exists, mkdir } from "@tauri-apps/plugin-fs";
-import type { LocalStore } from "@taskmanager/core";
+import type { LocalStore } from "@shungite/core";
 import { createFileStore, watchVault } from "../file-store";
 import { createTauriLocalStore } from "../tauri-local-store";
 import {

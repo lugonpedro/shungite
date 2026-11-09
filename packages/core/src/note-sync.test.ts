@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskManager, type TaskManager } from "./index";
+import { createShungite, type Shungite } from "./index";
 import type { DeviceInfo } from "./remote-store";
 import {
   createMemoryFileStore,
@@ -25,13 +25,13 @@ function setup() {
   const remoteStore = createMemoryRemoteStore();
   const homeFileStore = createMemoryFileStore();
   const satelliteFileStore = createMemoryFileStore();
-  const home = createTaskManager({
+  const home = createShungite({
     localStore: createMemoryLocalStore(),
     fileStore: homeFileStore,
     remoteStore,
     device: homeDevice,
   });
-  const satellite = createTaskManager({
+  const satellite = createShungite({
     localStore: createMemoryLocalStore(),
     fileStore: satelliteFileStore,
     remoteStore,
@@ -40,13 +40,13 @@ function setup() {
   return { home, satellite, remoteStore, homeFileStore, satelliteFileStore };
 }
 
-async function withVaults(home: TaskManager, satellite: TaskManager) {
+async function withVaults(home: Shungite, satellite: Shungite) {
   await home.setVaultPath(HOME_VAULT);
   await satellite.setVaultPath(SATELLITE_VAULT);
 }
 
 /** A full round of Home and Satellite syncs, enough to reach a fixed point. */
-async function syncBoth(home: TaskManager, satellite: TaskManager) {
+async function syncBoth(home: Shungite, satellite: Shungite) {
   await home.sync();
   await satellite.sync();
   await home.sync();
