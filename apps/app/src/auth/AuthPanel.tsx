@@ -8,10 +8,17 @@ type Status =
   | { kind: "sending" }
   | { kind: "sent"; email: string }
   | { kind: "verifying"; email: string }
-  | { kind: "error"; message: string };
+  | { kind: "error"; email: string | null; message: string };
 
 const isWeb = platform.target === "web";
-const WEB_CODE_PATTERN = /^\d{6}$/;
+// O tamanho do código é configurado no projeto Supabase (Email OTP Length) e
+// pode ser 6 ou 8 dígitos; aceitamos os dois para não depender de uma config.
+const WEB_CODE_PATTERN = /^\d{6,8}$/;
+const WEB_CODE_MAX_LENGTH = 8;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 /**
  * Sign-in and sign-out. Sync is optional: when Supabase is not configured, or
@@ -60,13 +67,20 @@ export function AuthPanel() {
     if (!trimmedEmail) return;
 
     setStatus({ kind: "sending" });
-    const { error } = await auth.signInWithOtp({
-      email: trimmedEmail,
-      options: { emailRedirectTo: window.location.origin },
-    });
+    try {
+      const { error } = await auth.signInWithOtp({
+        email: trimmedEmail,
+        options: { emailRedirectTo: window.location.origin },
+      });
 
-    if (error) {
-      setStatus({ kind: "error", message: error.message });
+      if (error) {
+        setStatus({ kind: "error", email: null, message: error.message });
+        return;
+      }
+    } catch (cause) {
+      // A rejected request (offline, blocked storage) must not leave the panel
+      // without feedback.
+      setStatus({ kind: "error", email: null, message: errorMessage(cause) });
       return;
     }
 
@@ -82,14 +96,22 @@ export function AuthPanel() {
 
     const { email: pendingEmail } = status;
     setStatus({ kind: "verifying", email: pendingEmail });
-    const { error } = await auth.verifyOtp({
-      email: pendingEmail,
-      token,
-      type: "email",
-    });
 
-    if (error) {
-      setStatus({ kind: "error", message: error.message });
+    try {
+      const { error } = await auth.verifyOtp({
+        email: pendingEmail,
+        token,
+        type: "email",
+      });
+
+      if (error) {
+        // Keep the code step and the e-mail on screen: the user retries with
+        // the right code instead of being silently sent back to the e-mail form.
+        setStatus({ kind: "error", email: pendingEmail, message: error.message });
+        return;
+      }
+    } catch (cause) {
+      setStatus({ kind: "error", email: pendingEmail, message: errorMessage(cause) });
       return;
     }
 
@@ -98,17 +120,23 @@ export function AuthPanel() {
   }
 
   const sentEmail =
-    status.kind === "sent" || status.kind === "verifying" ? status.email : null;
+    status.kind === "sent" || status.kind === "verifying" || status.kind === "error"
+      ? status.email
+      : null;
   const verifying = status.kind === "verifying";
   const codeIsValid = !isWeb || WEB_CODE_PATTERN.test(code.trim());
 
   return (
     <div className="auth">
+      {status.kind === "error" ? (
+        <p role="alert">Não foi possível entrar: {status.message}</p>
+      ) : null}
+
       {sentEmail ? (
         <form onSubmit={(event) => void verifyCode(event)}>
           {isWeb ? (
             <p>
-              Enviamos um código de 6 dígitos para <strong>{sentEmail}</strong>.
+              Enviamos um código para <strong>{sentEmail}</strong>.
             </p>
           ) : (
             <p>
@@ -117,17 +145,17 @@ export function AuthPanel() {
             </p>
           )}
           <label>
-            {isWeb ? "Código de 6 dígitos" : "Código do e-mail"}
+            Código do e-mail
             <input
               autoComplete="one-time-code"
               inputMode="numeric"
-              maxLength={isWeb ? 6 : undefined}
+              maxLength={isWeb ? WEB_CODE_MAX_LENGTH : undefined}
               pattern="[0-9]*"
               value={code}
               onChange={(event) =>
                 setCode(
                   isWeb
-                    ? event.target.value.replace(/\D/g, "").slice(0, 6)
+                    ? event.target.value.replace(/\D/g, "").slice(0, WEB_CODE_MAX_LENGTH)
                     : event.target.value,
                 )
               }
@@ -172,8 +200,6 @@ export function AuthPanel() {
           </span>
         </form>
       )}
-
-      {status.kind === "error" ? <p role="alert">Não foi possível entrar: {status.message}</p> : null}
     </div>
   );
 }
