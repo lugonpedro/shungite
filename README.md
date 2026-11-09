@@ -126,4 +126,5 @@ funcionar só localmente.
 
 ## Documentação
 
-Decisões detalhadas ficam em `docs/adr/` e o vocabulário do domínio em `GLOSSARY.md`.
+- **Deploy** — Mac via `tauri build` e PWA na Vercel com Supabase hospedado, incluindo o checklist manual no iPhone: [`docs/deploy.md`](docs/deploy.md).
+- Decisões detalhadas ficam em `docs/adr/` e o vocabulário do domínio em `GLOSSARY.md`.
