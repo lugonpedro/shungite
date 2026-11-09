@@ -2,24 +2,28 @@ import type { Platform } from "./types";
 
 const NOT_IMPLEMENTED = "não implementado";
 
+function notImplemented(): Promise<never> {
+  return Promise.reject(new Error(NOT_IMPLEMENTED));
+}
+
 /** Web platform stub; real IndexedDB adapters land in #29. */
 export const platform: Platform = {
   createLocalStore() {
-    return Promise.reject(new Error(NOT_IMPLEMENTED));
+    return notImplemented();
   },
   createFileStore() {
     throw new Error(NOT_IMPLEMENTED);
   },
   watchVault() {
-    return Promise.reject(new Error(NOT_IMPLEMENTED));
+    return notImplemented();
   },
   defaultVaultPath() {
-    return Promise.reject(new Error(NOT_IMPLEMENTED));
+    return notImplemented();
   },
   ensureVaultFolder() {
-    return Promise.reject(new Error(NOT_IMPLEMENTED));
+    return notImplemented();
   },
   chooseVaultFolder() {
-    return Promise.reject(new Error(NOT_IMPLEMENTED));
+    return notImplemented();
   },
 };
